@@ -51,7 +51,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-lg shadow-xl">
+    <Card className="w-full max-w-xl shadow-xl">
       <CardHeader className="text-center">
         <div className="mx-auto mb-4">
           <AdminityLogo />
@@ -98,4 +98,3 @@ export function LoginForm() {
     </Card>
   );
 }
-
