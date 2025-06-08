@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
-import { HeaderNav } from '@/components/layout/header-nav';
+import { HeaderNav } from '@/components/layout/header-nav'; // Import HeaderNav
 import {
   Sidebar,
   SidebarContent,
@@ -12,12 +12,6 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ClientHeaderContent } from '@/components/layout/client-header-content';
 import { ClientSidebarContent } from '@/components/layout/client-sidebar-content';
-
-// Client component to manage header state and pass session to HeaderNav
-function DashboardHeaderClient({ session }: { session: Awaited<ReturnType<typeof getSession>> }) {
-   // This component ensures HeaderNav (client) can access useSidebar hook
-  return <HeaderNav session={session} />;
-}
 
 
 export default async function DashboardLayout({
@@ -32,7 +26,7 @@ export default async function DashboardLayout({
   }
   
   return (
-      <div className="flex min-h-screen w-full bg-muted/40"> {/* Changed flex-col to flex */}
+      <div className="flex min-h-screen w-full bg-muted/40">
         <Sidebar collapsible="icon" variant="sidebar" side="left">
           <SidebarHeader className="border-b">
             <ClientHeaderContent />
@@ -44,7 +38,7 @@ export default async function DashboardLayout({
           </SidebarContent>
         </Sidebar>
         <SidebarInset>
-          <DashboardHeaderClient session={session} />
+          <HeaderNav session={session} /> {/* Add HeaderNav back here */}
           <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
             {children}
           </main>
@@ -52,4 +46,3 @@ export default async function DashboardLayout({
       </div>
   );
 }
-
