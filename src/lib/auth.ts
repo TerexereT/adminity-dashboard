@@ -39,7 +39,9 @@ export async function createSession(userId: string, userName: string, userRole: 
 }
 
 export async function getSession() {
-  const sessionCookie = cookies().get(SESSION_COOKIE_NAME)?.value;
+  // Addressing the runtime error: "cookies() should be awaited before using its value"
+  const cookieStore = await cookies(); 
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionCookie) return null;
   return await decrypt(sessionCookie);
 }
