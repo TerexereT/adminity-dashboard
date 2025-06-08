@@ -32,7 +32,7 @@ export default async function DashboardLayout({
   }
   
   return (
-      <div className="flex min-h-screen w-full flex-col bg-muted/40">
+      <div className="flex min-h-screen w-full bg-muted/40"> {/* Changed flex-col to flex */}
         <Sidebar collapsible="icon" variant="sidebar" side="left">
           <SidebarHeader className="border-b">
             <ClientHeaderContent />
@@ -52,3 +52,4 @@ export default async function DashboardLayout({
       </div>
   );
 }
+
