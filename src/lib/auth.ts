@@ -1,7 +1,12 @@
+
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
-const secretKey = process.env.JWT_SECRET_KEY || "default-secret-key-for-adminity-app"; // Replace with a strong secret from env variables
+// Ensure that if JWT_SECRET_KEY is an empty string, we still use the fallback.
+const envSecret = process.env.JWT_SECRET_KEY;
+const fallbackSecret = "default-secret-key-for-adminity-app"; // Replace with a strong secret from env variables
+const secretKey = (typeof envSecret === 'string' && envSecret.length > 0) ? envSecret : fallbackSecret;
+
 const key = new TextEncoder().encode(secretKey);
 
 const SESSION_COOKIE_NAME = 'adminity_session';
@@ -60,7 +65,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   if (password === 'password' && hash === MOCK_ADMIN_USER.passwordHash) { // Simple check for demo
       return true;
   }
-  return false; 
+  return false;
 }
 
 export async function findAdminByEmail(email: string) {
