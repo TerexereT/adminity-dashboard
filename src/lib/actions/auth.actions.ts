@@ -1,3 +1,4 @@
+
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -12,6 +13,7 @@ export async function login(formData: LoginFormData) {
   }
 
   const { email, password } = validatedFields.data;
+  let loginSuccessful = false;
 
   try {
     const admin = await findAdminByEmail(email);
@@ -25,6 +27,7 @@ export async function login(formData: LoginFormData) {
     }
     
     await createSession(admin.id, admin.name, admin.role);
+    loginSuccessful = true;
 
   } catch (error) {
     // console.error('Login error:', error); // Log for server-side debugging
@@ -33,7 +36,12 @@ export async function login(formData: LoginFormData) {
     return { error: 'An unexpected error occurred. Please try again.' };
   }
 
-  redirect('/dashboard');
+  if (loginSuccessful) {
+    redirect('/dashboard');
+  }
+  // If loginSuccessful is false here, it means an error object was returned from the catch block.
+  // This function will implicitly return undefined if not redirected and no error object was returned,
+  // though that path shouldn't be hit with the current logic.
 }
 
 export async function logout() {
