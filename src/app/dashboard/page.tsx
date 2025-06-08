@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, ShieldAlert, BarChart3, FileText } from "lucide-react";
 import { MOCK_ADMINS_COUNT, MOCK_USERS_COUNT, MOCK_SURVEYS_COUNT, MOCK_DOCUMENTS_COUNT } from "@/lib/constants";
@@ -17,21 +18,23 @@ export default function DashboardPage() {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Link href={stat.href} key={stat.title} legacyBehavior>
-            <a className="block hover:shadow-lg transition-shadow duration-200 rounded-lg">
-              <Card className="h-full flex flex-col">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium font-body">
-                    {stat.title}
-                  </CardTitle>
-                  <stat.icon className="h-5 w-5 text-muted-foreground" />
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <div className="text-3xl font-bold font-headline">{stat.value}</div>
-                  <p className="text-xs text-muted-foreground pt-1">{stat.description}</p>
-                </CardContent>
-              </Card>
-            </a>
+          <Link 
+            href={stat.href} 
+            key={stat.title} 
+            className="block hover:shadow-lg transition-shadow duration-200 rounded-lg"
+          >
+            <Card className="h-full flex flex-col">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium font-body">
+                  {stat.title}
+                </CardTitle>
+                <stat.icon className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <div className="text-3xl font-bold font-headline">{stat.value}</div>
+                <p className="text-xs text-muted-foreground pt-1">{stat.description}</p>
+              </CardContent>
+            </Card>
           </Link>
         ))}
       </div>
