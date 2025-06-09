@@ -13,6 +13,7 @@ This guide provides instructions for deploying the Adminity Next.js application 
     ```
     Follow the prompts to connect the CLI to your AWS account.
 3.  **Project Code**: Ensure you have the Adminity project code locally.
+4.  **n8n Chat Webhook URL (Optional)**: If you plan to use the n8n chat widget, have your n8n chat webhook URL ready.
 
 ## Deployment Steps
 
@@ -90,7 +91,7 @@ frontend:
 
 ### 4. Configure Environment Variables
 
-Your application requires a `JWT_SECRET_KEY`. For Genkit AI features, you might also need `GOOGLE_API_KEY` or other model provider keys.
+Your application requires a `JWT_SECRET_KEY`. For Genkit AI features, you might also need `GOOGLE_API_KEY`. For the chat widget, you'll need `NEXT_PUBLIC_N8N_CHAT_WEBHOOK_URL`.
 
 **Do NOT commit your actual secret keys to your repository.**
 
@@ -101,10 +102,11 @@ In the Amplify Console:
 4.  Add your environment variables. For a development environment, you can use specific dev keys:
     *   `JWT_SECRET_KEY`: *Your_Strong_Development_Secret_Key_For_Amplify*
     *   `GOOGLE_API_KEY`: *Your_Development_Google_AI_Studio_Key_For_Amplify* (if applicable)
-    *   You might also want to set `NEXT_PUBLIC_` prefixed variables if your client-side code needs them.
+    *   `NEXT_PUBLIC_N8N_CHAT_WEBHOOK_URL`: *Your_n8n_Chat_Webhook_URL_For_Development* (if applicable)
+    *   You might also want to set other `NEXT_PUBLIC_` prefixed variables if your client-side code needs them.
     *   Amplify automatically sets `NODE_ENV` based on the branch (e.g., `development` for non-production branches).
 
-These variables will be available during the build process and at runtime for your server-side code.
+These variables will be available during the build process and at runtime for your server-side code. Variables prefixed with `NEXT_PUBLIC_` will also be available client-side.
 
 ### 5. Deploy (Publish)
 

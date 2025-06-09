@@ -18,10 +18,15 @@ Create a `.env.local` file in the root of your project and add the following env
 
 ```env
 # Example .env.local
-JWT_SECRET_KEY=your-super-secret-jwt-key-for-production # Replace with a strong, unique secret
-# For Genkit, if using Google AI Studio or other specific model providers,
-# you might need to add GOOGLE_API_KEY or other relevant API keys.
-# e.g., GOOGLE_API_KEY=your_google_ai_studio_api_key
+
+# Security: Must be set for production and development for secure sessions
+JWT_SECRET_KEY=your-super-secret-jwt-key-for-production
+
+# Genkit AI: Required if using Google AI Studio or other specific model providers
+# GOOGLE_API_KEY=your_google_ai_studio_api_key
+
+# n8n Chat Widget: Required if using the n8n chat integration on the dashboard
+NEXT_PUBLIC_N8N_CHAT_WEBHOOK_URL=your_n8n_chat_webhook_url
 ```
 
 **Note on `JWT_SECRET_KEY`**: This key is crucial for securing user sessions. The application has a fallback default key for ease of local setup, but this **MUST** be overridden with a strong, unique secret in your `.env.local` file for any development or production deployment. You can generate a strong secret using a password manager or a command-line tool like `openssl rand -base64 32`.
@@ -92,11 +97,10 @@ Firebase App Hosting will automatically use the `apphosting.yaml` file and the s
         ```
 
 3.  **Environment Variables in Firebase App Hosting:**
-    *   You **MUST** configure your `JWT_SECRET_KEY` (and any other necessary API keys like `GOOGLE_API_KEY` if using Genkit with Google AI) as secrets in your Firebase App Hosting backend. Do not commit your production secrets directly into your codebase. Refer to the Firebase App Hosting documentation on how to manage secrets.
+    *   You **MUST** configure your `JWT_SECRET_KEY` (and any other necessary API keys like `GOOGLE_API_KEY` or `NEXT_PUBLIC_N8N_CHAT_WEBHOOK_URL`) as secrets in your Firebase App Hosting backend. Do not commit your production secrets directly into your codebase. Refer to the Firebase App Hosting documentation on how to manage secrets.
 
 For more detailed instructions on deploying to Firebase App Hosting, please refer to the [official Firebase App Hosting documentation](https://firebase.google.com/docs/app-hosting).
 
 ### Other Platforms
 
 While configured for Firebase App Hosting, this Next.js application can be deployed to other platforms that support Node.js and Next.js applications (e.g., Vercel, Netlify, AWS Amplify, self-hosted servers). You would typically use the `npm run build` and `npm run start` commands. Ensure you configure environment variables appropriately on your chosen platform.
-```

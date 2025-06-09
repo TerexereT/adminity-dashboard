@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
-import { HeaderNav } from '@/components/layout/header-nav'; // Import HeaderNav
+import { HeaderNav } from '@/components/layout/header-nav'; 
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +12,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ClientHeaderContent } from '@/components/layout/client-header-content';
 import { ClientSidebarContent } from '@/components/layout/client-sidebar-content';
+import { N8nChatWidget } from '@/components/chat/n8n-chat-widget';
 
 
 export default async function DashboardLayout({
@@ -38,11 +39,12 @@ export default async function DashboardLayout({
           </SidebarContent>
         </Sidebar>
         <SidebarInset>
-          <HeaderNav session={session} /> {/* Add HeaderNav back here */}
+          <HeaderNav session={session} /> 
           <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
             {children}
           </main>
         </SidebarInset>
+        <N8nChatWidget />
       </div>
   );
 }
