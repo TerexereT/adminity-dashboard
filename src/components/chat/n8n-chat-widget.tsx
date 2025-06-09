@@ -2,16 +2,16 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { createChat, type ChatProps } from '@n8n/chat'; // Changed import
+import { createChat, type ChatProps } from '@n8n/chat'; // Corrected import
 import '@n8n/chat/style.css'; // Import styles for @n8n/chat
 import { Button } from '@/components/ui/button';
 import { MessageSquare } from 'lucide-react';
 
-// Define a type for the chat instance, if available from the library, otherwise use 'any'
+// Define a type for the chat instance
 type N8nChatInstance = {
   open: () => void;
   close: () => void;
-  destroy?: () => void; // Optional destroy method
+  destroy?: () => void; 
 };
 
 export function N8nChatWidget() {
@@ -28,11 +28,8 @@ export function N8nChatWidget() {
 
   useEffect(() => {
     if (isClient && webhookUrl && !chatInstanceRef.current) {
-      const chatOptions: ChatProps = { // Assuming ChatProps is the correct type for options
+      const chatOptions: ChatProps = { 
         webhookUrl: webhookUrl,
-        // title: "Admin Support", // Optional: Customize title
-        // welcomeMessage: "Hello! How can we assist you today?", // Optional: Customize welcome message
-        // showResponseTime: false, // Optional
         onOpen: () => {
           setIsChatOpen(true);
         },
@@ -40,20 +37,18 @@ export function N8nChatWidget() {
           setIsChatOpen(false);
         },
       };
+      // Initialize chat and store the instance
       chatInstanceRef.current = createChat(chatOptions);
     }
 
-    // Cleanup function
+    // Cleanup function to destroy chat instance on component unmount
     return () => {
       if (chatInstanceRef.current && typeof chatInstanceRef.current.destroy === 'function') {
         chatInstanceRef.current.destroy();
+        chatInstanceRef.current = null;
       }
-      // Setting ref to null if instance is destroyed or on unmount, 
-      // though createChat might not need to be called again unless webhookUrl changes.
-      // For simplicity, we're not re-initializing on webhookUrl change here, 
-      // but in a real app, you might want to destroy and re-create if URL changes.
     };
-  }, [isClient, webhookUrl]); // Dependencies for creating/managing the chat instance
+  }, [isClient, webhookUrl]); 
 
   const handleToggleChat = () => {
     if (chatInstanceRef.current) {
@@ -81,7 +76,7 @@ export function N8nChatWidget() {
       >
         <MessageSquare size={28} />
       </Button>
-      {/* The Chat UI is now managed by the createChat call and injected into the DOM,
+      {/* The Chat UI is managed by the createChat call and injected into the DOM by the library,
           so we don't render a <Chat /> component here. */}
     </>
   );
