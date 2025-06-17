@@ -1,7 +1,12 @@
 
+'use server';
+
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, type DocumentData } from 'firebase/firestore';
+import type { Admin } from '@/lib/types';
 
 // Ensure that if JWT_SECRET_KEY is an empty string, we still use the fallback.
 const envSecret = process.env.JWT_SECRET_KEY;
@@ -51,46 +56,39 @@ export async function deleteSession() {
   cookies().delete(SESSION_COOKIE_NAME);
 }
 
-// Mock user data for login
-// The password for this user is "password"
-const MOCK_ADMIN_USER = {
-  id: 'superadmin001',
-  email: 'admin@example.com',
-  passwordHash: '$2b$10$Gl9L3u0j1J2t.l8qKkDcGeiQ9s8jR7xY0zWc3VbA6sD4eF5gH6iI.', // Hash for "password"
-  name: 'Super Admin',
-  role: 'superadmin' as 'superadmin' | 'admin',
-};
-
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return await bcrypt.compare(password, hash);
 }
 
-export async function findAdminByEmail(email: string) {
-  // In a real app, query your database for the user by email.
-  // For this demo, we check against the mock user and users in Firestore.
+export async function findAdminByEmail(email: string): Promise<Pick<Admin, 'id' | 'name' | 'email' | 'role' | 'passwordHash'> | null> {
+  try {
+    const adminsRef = collection(db, 'admins');
+    const q = query(adminsRef, where('email', '==', email));
+    const querySnapshot = await getDocs(q);
 
-  // Check mock user first (e.g., a built-in super admin)
-  if (email === MOCK_ADMIN_USER.email) {
-    return MOCK_ADMIN_USER;
+    if (querySnapshot.empty) {
+      return null;
+    }
+
+    // Assuming email is unique, so we take the first document.
+    const adminDoc = querySnapshot.docs[0];
+    const adminData = adminDoc.data() as DocumentData;
+
+    // Ensure all necessary fields are present for login
+    if (!adminData.name || !adminData.email || !adminData.role || !adminData.passwordHash) {
+        console.error('Admin data missing required fields for login:', adminDoc.id, adminData);
+        return null;
+    }
+
+    return {
+      id: adminDoc.id,
+      name: adminData.name,
+      email: adminData.email,
+      role: adminData.role as 'admin' | 'superadmin',
+      passwordHash: adminData.passwordHash,
+    };
+  } catch (error) {
+    console.error("Error fetching admin by email from Firestore: ", error);
+    return null;
   }
-  
-  // If not the mock user, this is where you would typically query Firestore.
-  // However, the current admin management page directly queries Firestore.
-  // For the login action, we need a way to get a user from Firestore by email.
-  // This part needs to be implemented if admins from Firestore are to log in
-  // via this generic findAdminByEmail function.
-  // For now, login will only work for the MOCK_ADMIN_USER.
-  // To enable login for Firestore admins, you'd query the 'admins' collection here.
-  // Example (conceptual, db instance needs to be available here or passed):
-  // import { db } from '@/lib/firebase'; // Potentially causes issues in this file if db init is complex
-  // import { collection, query, where, getDocs } from 'firebase/firestore';
-  // const adminsRef = collection(db, 'admins');
-  // const q = query(adminsRef, where('email', '==', email));
-  // const querySnapshot = await getDocs(q);
-  // if (!querySnapshot.empty) {
-  //   const adminDoc = querySnapshot.docs[0];
-  //   return { id: adminDoc.id, ...adminDoc.data() } as typeof MOCK_ADMIN_USER;
-  // }
-
-  return null;
 }

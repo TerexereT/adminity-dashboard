@@ -1,3 +1,4 @@
+
 import type { NavItem } from '@/lib/types';
 import { Users, LayoutDashboard, ShieldAlert, FileText, BarChart3, Settings } from 'lucide-react';
 
@@ -34,8 +35,3 @@ export const DASHBOARD_NAV_ITEMS: NavItem[] = [
   //   icon: Settings,
   // }
 ];
-
-export const MOCK_ADMINS_COUNT = 5;
-export const MOCK_USERS_COUNT = 50;
-export const MOCK_SURVEYS_COUNT = 100;
-export const MOCK_DOCUMENTS_COUNT = 75;

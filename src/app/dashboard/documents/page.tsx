@@ -1,18 +1,20 @@
+
+'use client'; // Required for useState, useEffect if fetching data client-side
+
+import * as React from 'react';
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Download, FileText, Image as ImageIcon, FileType2 } from "lucide-react"; // FileType2 for generic docx
+import { Download, FileText, Image as ImageIcon, FileType2, Loader2 } from "lucide-react";
+import type { UserDocument } from '@/lib/types'; // Assuming UserDocument type exists
+import { useToast } from '@/hooks/use-toast';
 
-// Mock data - replace with actual data fetching
-const mockDocuments = [
-  { id: "d1", userId: "u1", userName: "User One", fileName: "contract.pdf", fileType: "PDF", uploadDate: "2023-04-20", url: "#" },
-  { id: "d2", userId: "u1", userName: "User One", fileName: "profile_pic.png", fileType: "PNG", uploadDate: "2023-04-22", url: "#" },
-  { id: "d3", userId: "u2", userName: "User Two", fileName: "report.docx", fileType: "DOCX", uploadDate: "2023-05-05", url: "#" },
-];
+// Mock data removed, replace with actual data fetching
+// const mockDocuments = [ ... ];
 
-const getFileIcon = (fileType: 'PDF' | 'DOCX' | 'PNG' | 'JPG' | 'JPEG') => {
-  switch (fileType) {
+const getFileIcon = (fileType?: string) => { // Make fileType optional or provide a default
+  switch (fileType?.toUpperCase()) {
     case 'PDF':
       return <FileText className="h-5 w-5 text-red-500" />;
     case 'DOCX':
@@ -27,6 +29,33 @@ const getFileIcon = (fileType: 'PDF' | 'DOCX' | 'PNG' | 'JPG' | 'JPEG') => {
 };
 
 export default function DocumentManagementPage() {
+  const [documents, setDocuments] = React.useState<UserDocument[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const { toast } = useToast();
+
+  // Placeholder for fetching documents - implement this with Firestore
+  React.useEffect(() => {
+    const fetchDocuments = async () => {
+      setIsLoading(true);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // In a real app, fetch from Firestore here and setDocuments
+      // For now, it will remain empty
+      setDocuments([]); 
+      setIsLoading(false);
+      // Example error toast if fetching failed:
+      // toast({ title: "Error", description: "Could not fetch documents.", variant: "destructive" });
+    };
+    fetchDocuments();
+  }, [toast]);
+
+  const filteredDocuments = documents.filter(doc =>
+    doc.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.userId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -39,7 +68,12 @@ export default function DocumentManagementPage() {
           <CardTitle>Filter Documents</CardTitle>
         </CardHeader>
         <CardContent>
-          <Input placeholder="Filter by User ID, Name or File Name..." className="max-w-md" />
+          <Input 
+            placeholder="Filter by User ID, Name or File Name..." 
+            className="max-w-md" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </CardContent>
       </Card>
       
@@ -49,6 +83,12 @@ export default function DocumentManagementPage() {
           <CardDescription>Browse and download user documents.</CardDescription>
         </CardHeader>
         <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-10">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="ml-2 text-muted-foreground">Loading documents...</p>
+            </div>
+          ) : (
            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/50">
@@ -61,13 +101,13 @@ export default function DocumentManagementPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border bg-background">
-                {mockDocuments.map((doc) => (
+                {filteredDocuments.map((doc) => (
                   <tr key={doc.id}>
                     <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-foreground flex items-center">
                       {getFileIcon(doc.fileType)}
                       <span className="ml-2">{doc.fileName}</span>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{doc.userName} (ID: {doc.userId})</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{doc.userName || 'N/A'} (ID: {doc.userId})</td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{doc.fileType}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{doc.uploadDate}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
@@ -83,8 +123,12 @@ export default function DocumentManagementPage() {
               </tbody>
             </table>
           </div>
-          {mockDocuments.length === 0 && <p className="py-4 text-center text-muted-foreground">No documents found.</p>}
-          {/* Placeholder for Pagination */}
+          )}
+          {!isLoading && filteredDocuments.length === 0 && (
+             <p className="py-4 text-center text-muted-foreground">
+                {documents.length === 0 ? 'No documents found in the system.' : 'No documents match your filter.'}
+             </p>
+          )}
         </CardContent>
       </Card>
     </div>

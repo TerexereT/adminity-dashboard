@@ -1,15 +1,21 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, ShieldAlert, BarChart3, FileText } from "lucide-react";
-import { MOCK_ADMINS_COUNT, MOCK_USERS_COUNT, MOCK_SURVEYS_COUNT, MOCK_DOCUMENTS_COUNT } from "@/lib/constants";
 import Link from "next/link";
+
+// Note: Live counts from Firestore would require asynchronous fetching.
+// These are placeholders for now.
+const USERS_COUNT = 0; // Replace with dynamic fetching later
+const ADMINS_COUNT = 0; // Replace with dynamic fetching later
+const SURVEYS_COUNT = 0; // Replace with dynamic fetching later
+const DOCUMENTS_COUNT = 0; // Replace with dynamic fetching later
 
 export default function DashboardPage() {
   const stats = [
-    { title: "Total Users", value: MOCK_USERS_COUNT, icon: Users, href: "/dashboard/users", description: "Manage all registered users." },
-    { title: "Admin Accounts", value: MOCK_ADMINS_COUNT, icon: ShieldAlert, href: "/dashboard/admins", description: "Oversee admin personnel." },
-    { title: "Survey Responses", value: MOCK_SURVEYS_COUNT, icon: BarChart3, href: "/dashboard/surveys", description: "View and analyze surveys." },
-    { title: "Uploaded Documents", value: MOCK_DOCUMENTS_COUNT, icon: FileText, href: "/dashboard/documents", description: "Access user documents." },
+    { title: "Total Users", value: USERS_COUNT, icon: Users, href: "/dashboard/users", description: "Manage all registered users." },
+    { title: "Admin Accounts", value: ADMINS_COUNT, icon: ShieldAlert, href: "/dashboard/admins", description: "Oversee admin personnel." },
+    { title: "Survey Responses", value: SURVEYS_COUNT, icon: BarChart3, href: "/dashboard/surveys", description: "View and analyze surveys." },
+    { title: "Uploaded Documents", value: DOCUMENTS_COUNT, icon: FileText, href: "/dashboard/documents", description: "Access user documents." },
   ];
 
   return (
