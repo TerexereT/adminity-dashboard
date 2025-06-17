@@ -11,13 +11,17 @@ export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get('adminity_session')?.value;
 
   let sessionPayload = null;
-  if (sessionCookie) {
+  // Explicitly check if sessionCookie is not undefined AND not an empty string before attempting decryption
+  if (sessionCookie && sessionCookie !== '') {
     try {
       sessionPayload = await decrypt(sessionCookie);
     } catch (error) {
       // Decryption failed (e.g. invalid token, expired)
       sessionPayload = null;
     }
+  } else if (sessionCookie === '') {
+    // If the cookie is an empty string, it implies an invalid/cleared session.
+    sessionPayload = null;
   }
   
   const isAuthenticated = !!sessionPayload?.userId;
@@ -44,10 +48,18 @@ export async function middleware(request: NextRequest) {
   const loginUrl = new URL('/login', request.url);
   const response = NextResponse.redirect(loginUrl);
 
-  if (sessionCookie && !sessionPayload) {
-    // If there was a session cookie but it was invalid (decryption failed or no userId),
-    // clear it to prevent a redirect loop with a bad cookie.
-    response.cookies.delete('adminity_session');
+  // This logic is for clearing a cookie if it was present but invalid.
+  // After logout, sessionCookie might be '' or undefined.
+  // If sessionCookie was present (not undefined) but decrypt() returned null (making sessionPayload null),
+  // this ensures the bad/invalid cookie is cleared.
+  if (typeof sessionCookie === 'string' && !sessionPayload) {
+    // Ensure consistent cookie clearing method
+    response.cookies.set('adminity_session', '', { 
+      expires: new Date(0), 
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production'
+    });
   }
 
   return response;
