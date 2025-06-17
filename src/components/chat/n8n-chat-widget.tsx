@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -6,16 +7,21 @@ import { createChat } from '@n8n/chat';
 
 export const N8nChatWidget = () => {
 	useEffect(() => {
+    const webhookUrl = process.env.NEXT_PUBLIC_N8N_CHAT_WEBHOOK_URL;
+
+    if (!webhookUrl) {
+      console.warn('N8N Chat: NEXT_PUBLIC_N8N_CHAT_WEBHOOK_URL is not set. Chat widget will not initialize.');
+      return;
+    }
+
 		createChat({
-			webhookUrl: process.env.NEXT_PUBLIC_N8N_CHAT_WEBHOOK_URL,
+			webhookUrl: webhookUrl,
       webhookConfig: {
         method: 'POST',
         headers: {}
       },
-      // target: '#n8n-chat',
       mode: 'window',
       chatInputKey: 'chatInput',
-      // chatSessionKey: 'sessionId',
       metadata: {},
       showWelcomeScreen: false,
       defaultLanguage: 'en',

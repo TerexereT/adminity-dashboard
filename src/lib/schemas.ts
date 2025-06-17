@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 export const LoginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(1, { message: 'Password is required.' }), // Changed min from 6 to 1 for demo, can be adjusted
+  password: z.string().min(1, { message: 'Password is required.' }),
 });
 
 export type LoginFormData = z.infer<typeof LoginSchema>;
@@ -13,18 +13,21 @@ export const AdminFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
   role: z.enum(['admin', 'superadmin'], { message: 'Invalid role selected.' }),
-  password: z.string().optional(), // Password itself is optional at the object level
+  password: z.string().optional(),
   confirmPassword: z.string().optional(),
 }).superRefine((data, ctx) => {
-  // Case 1: New admin (no id provided)
-  if (!data.id) {
-    if (!data.password || data.password.length === 0) {
+  const isEditing = !!data.id;
+  const passwordProvided = data.password && data.password.length > 0;
+  const confirmPasswordProvided = data.confirmPassword && data.confirmPassword.length > 0;
+
+  if (!isEditing) { // Logic for new admin
+    if (!passwordProvided) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Password is required for new admins.',
         path: ['password'],
       });
-    } else if (data.password.length < 8) {
+    } else if (data.password!.length < 8) { // Assertion: passwordProvided is true
       ctx.addIssue({
         code: z.ZodIssueCode.too_small,
         minimum: 8,
@@ -34,56 +37,40 @@ export const AdminFormSchema = z.object({
         path: ['password'],
       });
     }
-    if (data.password && data.password !== data.confirmPassword) {
+    if (passwordProvided && data.password !== data.confirmPassword) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Passwords don't match.",
         path: ['confirmPassword'],
       });
     }
-  }
-  // Case 2: Existing admin (id is provided) - password change is optional
-  else if (data.id && data.password) { // Only validate if password is provided for an update
-    if (data.password.length < 8) {
+  } else { // Logic for editing an existing admin
+    if (passwordProvided) { // If user intends to change password
+      if (data.password!.length < 8) { // Assertion: passwordProvided is true
+        ctx.addIssue({
+          code: z.ZodIssueCode.too_small,
+          minimum: 8,
+          type: 'string',
+          inclusive: true,
+          message: 'New password must be at least 8 characters.',
+          path: ['password'],
+        });
+      }
+      if (data.password !== data.confirmPassword) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Passwords don't match.",
+          path: ['confirmPassword'],
+        });
+      }
+    } else if (confirmPasswordProvided && !passwordProvided) {
+      // User typed in confirmPassword but left new password blank
       ctx.addIssue({
-        code: z.ZodIssueCode.too_small,
-        minimum: 8,
-        type: 'string',
-        inclusive: true,
-        message: 'Password must be at least 8 characters.',
+        code: z.ZodIssueCode.custom,
+        message: 'Please enter the new password as well if you intend to change it. Leave both blank to keep the current password.',
         path: ['password'],
       });
     }
-    if (data.password !== data.confirmPassword) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Passwords don't match.",
-        path: ['confirmPassword'],
-      });
-    }
-  }
-
-  // If only confirmPassword is provided without a new password (for existing or new)
-  // This check should ideally be if password has content, then confirmPassword is needed
-  // The above checks cover password matching. This handles confirmPassword existing without password.
-  if (data.confirmPassword && (!data.password || data.password.length === 0)) {
-     if (!data.id) { // For new admin, password would be required anyway by above.
-        // This is mostly for edit case if user types in confirm but not new password.
-         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Enter the new password first if you want to confirm it.',
-            path: ['password'],
-          });
-     } else if (data.id && data.password && data.password.length > 0){
-        // This scenario is fine, means they are changing password.
-     } else if (data.id && (!data.password || data.password.length === 0)) {
-        // Editing, password field empty, but confirmPassword is not.
-         ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'To change password, enter new password first.',
-            path: ['password'],
-          });
-     }
   }
 });
 
@@ -93,7 +80,7 @@ export type AdminFormData = z.infer<typeof AdminFormSchema>;
 export const UserRegistrationSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
   email: z.string().email({ message: 'Invalid email address.' }),
-  // Add any other fields required for user registration
 });
 
 export type UserRegistrationFormData = z.infer<typeof UserRegistrationSchema>;
+
