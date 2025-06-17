@@ -13,35 +13,47 @@ export async function login(formData: LoginFormData) {
   }
 
   const { email, password } = validatedFields.data;
-  let loginSuccessful = false;
+  let sessionCreatedSuccessfully = false;
 
   try {
     const admin = await findAdminByEmail(email);
     if (!admin) {
-      return { error: 'Invalid credentials.' };
+      return { error: 'Invalid credentials. Please check your email and password.' };
     }
 
     const passwordsMatch = await verifyPassword(password, admin.passwordHash);
     if (!passwordsMatch) {
-      return { error: 'Invalid credentials.' };
+      return { error: 'Invalid credentials. Please check your email and password.' };
     }
     
-    await createSession(admin.id, admin.name, admin.role);
-    loginSuccessful = true;
-
-  } catch (error) {
-    // console.error('Login error:', error); // Log for server-side debugging
-    // In a real app, you might want to distinguish between different types of errors.
-    // For security, a generic message is often better for the client.
-    return { error: 'An unexpected error occurred. Please try again.' };
+    // Credentials are valid, now attempt to create session
+    try {
+      await createSession(admin.id, admin.name, admin.role);
+      sessionCreatedSuccessfully = true;
+    } catch (sessionError) {
+      console.error('Session creation error:', sessionError);
+      // This error during session creation (e.g., JWT signing, cookie setting) is critical.
+      return { error: 'Could not start your session due to an internal error. Please try again.' };
+    }
+    
+  } catch (authError) {
+    // Catches errors from findAdminByEmail or verifyPassword if they throw unexpectedly
+    // (e.g., database connectivity issues not handled within those functions)
+    console.error('Authentication process error:', authError); 
+    return { error: 'An authentication error occurred. Please try again.' };
   }
 
-  if (loginSuccessful) {
+  if (sessionCreatedSuccessfully) {
+    // If session creation was successful, redirect.
+    // The redirect function throws an error that Next.js handles to navigate.
+    // This is intentionally not in a try-catch block that would return an error message.
     redirect('/dashboard');
   }
-  // If loginSuccessful is false here, it means an error object was returned from the catch block.
-  // This function will implicitly return undefined if not redirected and no error object was returned,
-  // though that path shouldn't be hit with the current logic.
+  
+  // Fallback: This line should ideally not be reached if logic is correct,
+  // as either a redirect happens or an error object is returned.
+  // If it is reached, it means session creation failed in a way not returning an error above.
+  return { error: 'Login failed due to an unexpected server issue. Please try again.' };
 }
 
 export async function logout() {
