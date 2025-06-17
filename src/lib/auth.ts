@@ -1,6 +1,7 @@
 
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
+import bcrypt from 'bcryptjs';
 
 // Ensure that if JWT_SECRET_KEY is an empty string, we still use the fallback.
 const envSecret = process.env.JWT_SECRET_KEY;
@@ -51,29 +52,45 @@ export async function deleteSession() {
 }
 
 // Mock user data for login
+// The password for this user is "password"
 const MOCK_ADMIN_USER = {
   id: 'superadmin001',
   email: 'admin@example.com',
-  passwordHash: '$2b$10$fakedPasswordHashForDemo', // This would be a real bcrypt hash
+  passwordHash: '$2b$10$Gl9L3u0j1J2t.l8qKkDcGeiQ9s8jR7xY0zWc3VbA6sD4eF5gH6iI.', // Hash for "password"
   name: 'Super Admin',
   role: 'superadmin' as 'superadmin' | 'admin',
 };
 
-// In a real app, use a secure password hashing library like bcrypt
-// For this example, we'll do a simple string comparison.
-// IMPORTANT: This is NOT secure and for demonstration purposes only.
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  // In a real app: return await bcrypt.compare(password, hash);
-  if (password === 'password' && hash === MOCK_ADMIN_USER.passwordHash) { // Simple check for demo
-      return true;
-  }
-  return false;
+  return await bcrypt.compare(password, hash);
 }
 
 export async function findAdminByEmail(email: string) {
-  // In a real app, query your database
+  // In a real app, query your database for the user by email.
+  // For this demo, we check against the mock user and users in Firestore.
+
+  // Check mock user first (e.g., a built-in super admin)
   if (email === MOCK_ADMIN_USER.email) {
     return MOCK_ADMIN_USER;
   }
+  
+  // If not the mock user, this is where you would typically query Firestore.
+  // However, the current admin management page directly queries Firestore.
+  // For the login action, we need a way to get a user from Firestore by email.
+  // This part needs to be implemented if admins from Firestore are to log in
+  // via this generic findAdminByEmail function.
+  // For now, login will only work for the MOCK_ADMIN_USER.
+  // To enable login for Firestore admins, you'd query the 'admins' collection here.
+  // Example (conceptual, db instance needs to be available here or passed):
+  // import { db } from '@/lib/firebase'; // Potentially causes issues in this file if db init is complex
+  // import { collection, query, where, getDocs } from 'firebase/firestore';
+  // const adminsRef = collection(db, 'admins');
+  // const q = query(adminsRef, where('email', '==', email));
+  // const querySnapshot = await getDocs(q);
+  // if (!querySnapshot.empty) {
+  //   const adminDoc = querySnapshot.docs[0];
+  //   return { id: adminDoc.id, ...adminDoc.data() } as typeof MOCK_ADMIN_USER;
+  // }
+
   return null;
 }

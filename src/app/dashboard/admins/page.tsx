@@ -33,6 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import bcrypt from 'bcryptjs';
 
 export default function AdminManagementPage() {
   const [admins, setAdmins] = React.useState<Admin[]>([]);
@@ -67,7 +68,7 @@ export default function AdminManagementPage() {
           email: docData.email,
           role: docData.role,
           createdAt: createdAtString,
-          passwordHash: docData.passwordHash,
+          passwordHash: docData.passwordHash, // Ensure passwordHash is part of the fetched data
         } as Admin;
       });
       setAdmins(fetchedAdmins);
@@ -103,39 +104,43 @@ export default function AdminManagementPage() {
   };
 
   const handleAdminFormSubmit = async (data: AdminFormData) => {
+    setIsLoading(true); // Set loading state at the beginning
     try {
+      const saltRounds = 10;
       if (adminToEdit) {
         // Edit existing admin
         const adminDocRef = doc(db, 'admins', adminToEdit.id);
-        const updateData: Partial<Admin> = {
+        const updateData: Partial<Omit<Admin, 'id' | 'createdAt'>> = { // Ensure correct type for updateData
           name: data.name,
           email: data.email,
           role: data.role,
         };
         if (data.password) {
-          // In a real app, hash the password before saving
-          updateData.passwordHash = `hashed_${data.password}`;
+          const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+          updateData.passwordHash = hashedPassword;
         }
         await updateDoc(adminDocRef, updateData);
         toast({ title: "Admin Updated", description: `${data.name} has been updated successfully.` });
       } else {
         // Add new admin
+        if (!data.password) {
+          // This should be caught by the schema, but as a fallback:
+          toast({ title: "Error", description: "Password is required for new admins.", variant: "destructive" });
+          setIsLoading(false);
+          return;
+        }
+        const hashedPassword = await bcrypt.hash(data.password, saltRounds);
         const newAdminData: Omit<Admin, 'id' | 'createdAt'> & { createdAt: any } = {
           name: data.name,
           email: data.email,
           role: data.role,
-          createdAt: serverTimestamp(), // Use Firestore server timestamp
+          passwordHash: hashedPassword,
+          createdAt: serverTimestamp(), 
         };
-        if (data.password) {
-          // In a real app, hash the password before saving
-          newAdminData.passwordHash = `hashed_${data.password}`;
-        }
-        const docRef = await addDoc(adminsCollectionRef, newAdminData);
-        // No need to manually set ID here, Firestore generates it.
-        // The fetchAdmins will re-fetch and include the new admin with its ID.
+        await addDoc(adminsCollectionRef, newAdminData);
         toast({ title: "Admin Added", description: `${data.name} has been added successfully.` });
       }
-      fetchAdmins(); // Re-fetch admins to update the list
+      fetchAdmins(); 
     } catch (error) {
       console.error("Error saving admin: ", error);
       toast({
@@ -146,6 +151,7 @@ export default function AdminManagementPage() {
     } finally {
       setIsFormDialogOpen(false);
       setAdminToEdit(null);
+      setIsLoading(false); // Reset loading state
     }
   };
 
@@ -155,7 +161,7 @@ export default function AdminManagementPage() {
         const adminDocRef = doc(db, 'admins', adminToDelete.id);
         await deleteDoc(adminDocRef);
         toast({ title: "Admin Deleted", description: `${adminToDelete.name} has been deleted.`, variant: "destructive" });
-        fetchAdmins(); // Re-fetch admins to update the list
+        fetchAdmins(); 
       } catch (error) {
         console.error("Error deleting admin: ", error);
         toast({
