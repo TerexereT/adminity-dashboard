@@ -1,3 +1,4 @@
+import { Timestamp } from "firebase/firestore";
 
 export type NavItem = {
   title: string;
@@ -18,10 +19,10 @@ export type Admin = {
 export type User = {
   id: string;
   name: string;
+  phone: string;
   email: string;
-  registrationDate: string;
-  surveyCount: number;
-  documentCount: number;
+  userType: 0|1|2;
+  createdAt: string;
 };
 
 export type SurveyResponse = {

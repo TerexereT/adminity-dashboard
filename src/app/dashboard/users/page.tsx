@@ -6,57 +6,47 @@ import {
   collection,
   addDoc,
   serverTimestamp,
-  Timestamp,
-  orderBy, // Added for constraints
+  orderBy, Timestamp, // Added for constraints
   type DocumentData, // Added for transform
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import type { User } from '@/lib/types';
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Eye, Loader2 } from "lucide-react";
-import type { User } from '@/lib/types';
 import type { UserRegistrationFormData } from '@/lib/schemas';
-import { UserRegistrationDialog } from '@/components/user/user-registration-dialog';
 import { UserDetailsDialog } from '@/components/user/user-details-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { UserRegistrationDialog } from '@/components/user/user-registration-dialog';
 import { useFirestoreCollection } from '@/hooks/useFirestoreCollection'; // Import the hook
+import { format } from 'date-fns';
 
 export default function UserManagementPage() {
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = React.useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = React.useState(false);
   const [selectedUserForDetails, setSelectedUserForDetails] = React.useState<User | null>(null);
-  const [searchTerm, setSearchTerm] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false); // For form submission loading state
-  const { toast } = useToast();
-
   const transformUser = React.useCallback((id: string, data: DocumentData): User => {
-    let registrationDateString = new Date().toISOString().split('T')[0]; // Default
-    if (data.registrationDate instanceof Timestamp) {
-      registrationDateString = data.registrationDate.toDate().toISOString().split('T')[0];
-    } else if (typeof data.registrationDate === 'string') {
-      registrationDateString = data.registrationDate;
-    } else if (data.registrationDate?.seconds && typeof data.registrationDate.seconds === 'number') {
-      registrationDateString = new Timestamp(data.registrationDate.seconds, data.registrationDate.nanoseconds || 0).toDate().toISOString().split('T')[0];
-    }
     return {
-      id,
-      name: data.name || 'N/A',
-      email: data.email || 'N/A',
-      registrationDate: registrationDateString,
-      surveyCount: data.surveyCount || 0,
-      documentCount: data.documentCount || 0,
-    } as User;
-  }, []);
+      id: id,
+      name: data.name, // Add name as it's in the schema
+      email: data.email || undefined,
+      phone: data.phone || '', // Ensure phone is always a string
+      createdAt: data.createdAt ? Timestamp.fromDate(new Date(data.createdAt)).toString() : '', // Handle potential Timestamp or Date string
+      userType: data.userType, // Assuming userType is stored in Firestore
+    };
+  }, []); // No dependencies needed as it only uses fixed logic and imported types/functions
 
-  const userConstraints = React.useMemo(() => [orderBy('registrationDate', 'desc')], []);
-
-  const { data: users, isLoading: isLoadingUsers, error: fetchUsersError } = useFirestoreCollection<User>({
+  const userConstraints = React.useMemo(() => [orderBy('createdAt', 'desc')], []);
+ const { data: users, isLoading: isLoadingUsers, error: fetchUsersError } = useFirestoreCollection<User>({
     collectionName: 'Users',
     constraints: userConstraints,
     transform: transformUser,
   });
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   const handleOpenRegisterDialog = () => {
     setIsRegisterDialogOpen(true);
@@ -72,11 +62,12 @@ export default function UserManagementPage() {
     try {
       const newUserFirestoreData = {
         name: data.name,
-        email: data.email,
-        registrationDate: serverTimestamp(),
-        surveyCount: 0,
-        documentCount: 0,
+        createdAt: serverTimestamp(),
+        email: data.email || null, // Save email, handle optionality
+        phone: data.phone, // Save phone
+        userType: data.userType, // Save userType
       };
+
       await addDoc(collection(db, 'Users'), newUserFirestoreData);
       toast({ title: "User Registered", description: `${data.name} has been registered successfully.` });
       // No need to manually refetch, onSnapshot handles it.
@@ -93,10 +84,12 @@ export default function UserManagementPage() {
     }
   };
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    return (
+ user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || // Handle optional email
+ user.phone.includes(searchTerm))
+  });
 
   if (fetchUsersError) {
      return (
@@ -129,7 +122,7 @@ export default function UserManagementPage() {
             <Input
               type="text"
               placeholder="Filter users by name or email..."
-              className="h-10 w-full max-w-sm rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="h-10 w-full max-w-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -146,10 +139,10 @@ export default function UserManagementPage() {
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Name</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Registration Date</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Surveys</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Created At</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Documents</th>
-                    <th scope="col" className="relative px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
+ <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">User Type</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border bg-background">
@@ -157,12 +150,11 @@ export default function UserManagementPage() {
                     <tr key={user.id}>
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-foreground">{user.name}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.email}</td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.registrationDate}</td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground text-center">{user.surveyCount}</td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground text-center">{user.documentCount}</td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.createdAt}</td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.phone}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                        <Button variant="ghost" size="sm" onClick={() => handleOpenDetailsDialog(user)}>
-                          <Eye className="mr-1 h-4 w-4" /> View Details
+ <Button variant="ghost" size="sm" onClick={() => handleOpenDetailsDialog(user)}>
+                          <Eye className="h-4 w-4" />
                         </Button>
                       </td>
                     </tr>
@@ -179,6 +171,7 @@ export default function UserManagementPage() {
         </CardContent>
       </Card>
 
+      {/* UserRegistrationDialog */}
       <UserRegistrationDialog
         open={isRegisterDialogOpen}
         onOpenChange={setIsRegisterDialogOpen}

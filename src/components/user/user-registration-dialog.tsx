@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { UserRegistrationSchema, type UserRegistrationFormData } from '@/lib/schemas';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -24,6 +23,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 
 interface UserRegistrationDialogProps {
@@ -48,6 +48,8 @@ export function UserRegistrationDialog({ open, onOpenChange, onSubmit }: UserReg
       form.reset({
         name: '',
         email: '',
+        phone: '',
+        userType: 0, // Or a default value that makes sense for your application
       });
     }
   }, [open, form]);
@@ -66,7 +68,7 @@ export function UserRegistrationDialog({ open, onOpenChange, onSubmit }: UserReg
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Register New User</DialogTitle>
-          <DialogDescription>
+          <DialogDescription> 
             Fill in the form to register a new user in the system.
           </DialogDescription>
         </DialogHeader>
@@ -91,8 +93,34 @@ export function UserRegistrationDialog({ open, onOpenChange, onSubmit }: UserReg
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Email Address</FormLabel>
-                  <FormControl>
+ <FormControl>
                     <Input type="email" placeholder="user@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+ <FormLabel>Phone</FormLabel>
+ <FormControl>
+                    <Input type="tel" placeholder="123-456-7890" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="userType"
+              render={({ field }) => (
+                <FormItem>
+ <FormLabel>User Type</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
