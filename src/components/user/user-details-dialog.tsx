@@ -47,10 +47,22 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
             <p id="userEmail" className="col-span-2 break-words">{user.email}</p>
           </div>
           <div className="grid grid-cols-3 items-center gap-x-2">
-            <Label htmlFor="userRegDate" className="text-muted-foreground font-semibold">Registered:</Label>
-            <p id="userRegDate" className="col-span-2">{user.registrationDate}</p>
+            <Label htmlFor="userPhone" className="text-muted-foreground font-semibold">Phone:</Label>
+            <p id="userPhone" className="col-span-2 break-words">{user.phone}</p>
           </div>
-           <Separator className="my-2" />
+          <div className="grid grid-cols-3 items-center gap-x-2">
+            <Label htmlFor="userType" className="text-muted-foreground font-semibold">User Type:</Label>
+            <p id="userType" className="col-span-2">{user.userType}</p>
+          </div>
+          <div className="grid grid-cols-3 items-center gap-x-2">
+            <Label htmlFor="userCreatedAt" className="text-muted-foreground font-semibold">Registered:</Label>
+            <p id="userCreatedAt" className="col-span-2">{user.createdAt}</p>
+          </div>
+          {/* 
+            Fields like surveyCount and documentCount are not part of the base User type.
+            If these are needed, they should be added to the User type and fetched/calculated accordingly.
+            For now, they are removed to avoid displaying undefined.
+          <Separator className="my-2" />
           <div className="grid grid-cols-3 items-center gap-x-2">
             <Label htmlFor="userSurveys" className="text-muted-foreground font-semibold">Surveys:</Label>
             <p id="userSurveys" className="col-span-2">{user.surveyCount}</p>
@@ -58,7 +70,8 @@ export function UserDetailsDialog({ open, onOpenChange, user }: UserDetailsDialo
           <div className="grid grid-cols-3 items-center gap-x-2">
             <Label htmlFor="userDocs" className="text-muted-foreground font-semibold">Documents:</Label>
             <p id="userDocs" className="col-span-2">{user.documentCount}</p>
-          </div>
+          </div> 
+          */}
         </div>
         <Separator className="my-4" />
         <DialogFooter className="sm:justify-end">

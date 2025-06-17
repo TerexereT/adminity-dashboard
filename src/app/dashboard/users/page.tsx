@@ -21,26 +21,40 @@ import { UserDetailsDialog } from '@/components/user/user-details-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { UserRegistrationDialog } from '@/components/user/user-registration-dialog';
 import { useFirestoreCollection } from '@/hooks/useFirestoreCollection'; // Import the hook
-import { format } from 'date-fns';
 
 export default function UserManagementPage() {
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = React.useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = React.useState(false);
   const [selectedUserForDetails, setSelectedUserForDetails] = React.useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false); // For form submission loading state
+  
   const transformUser = React.useCallback((id: string, data: DocumentData): User => {
+    let createdAtString = 'N/A'; // Default
+    if (data.createdAt instanceof Timestamp) {
+      createdAtString = data.createdAt.toDate().toISOString().split('T')[0];
+    } else if (typeof data.createdAt === 'string') {
+      const date = new Date(data.createdAt);
+      if (!isNaN(date.getTime())) {
+        createdAtString = date.toISOString().split('T')[0];
+      } else {
+        createdAtString = data.createdAt; // Keep original string if it's not a parsable date
+      }
+    } else if (data.createdAt?.seconds && typeof data.createdAt.seconds === 'number') {
+      createdAtString = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds || 0).toDate().toISOString().split('T')[0];
+    }
+
     return {
       id: id,
-      name: data.name, // Add name as it's in the schema
-      email: data.email || undefined,
-      phone: data.phone || '', // Ensure phone is always a string
-      createdAt: data.createdAt ? Timestamp.fromDate(new Date(data.createdAt)).toString() : '', // Handle potential Timestamp or Date string
-      userType: data.userType, // Assuming userType is stored in Firestore
+      name: data.name || 'N/A',
+      email: data.email || 'N/A',
+      phone: data.phone || 'N/A',
+      createdAt: createdAtString,
+      userType: data.userType !== undefined ? data.userType : 0, // Default to 0 if undefined
     };
-  }, []); // No dependencies needed as it only uses fixed logic and imported types/functions
+  }, []);
 
   const userConstraints = React.useMemo(() => [orderBy('createdAt', 'desc')], []);
- const { data: users, isLoading: isLoadingUsers, error: fetchUsersError } = useFirestoreCollection<User>({
+  const { data: users, isLoading: isLoadingUsers, error: fetchUsersError } = useFirestoreCollection<User>({
     collectionName: 'Users',
     constraints: userConstraints,
     transform: transformUser,
@@ -63,14 +77,13 @@ export default function UserManagementPage() {
       const newUserFirestoreData = {
         name: data.name,
         createdAt: serverTimestamp(),
-        email: data.email || null, // Save email, handle optionality
-        phone: data.phone, // Save phone
-        userType: data.userType, // Save userType
+        email: data.email || null, 
+        phone: data.phone, 
+        userType: data.userType, 
       };
 
       await addDoc(collection(db, 'Users'), newUserFirestoreData);
       toast({ title: "User Registered", description: `${data.name} has been registered successfully.` });
-      // No need to manually refetch, onSnapshot handles it.
     } catch (error) {
       console.error("Error registering user: ", error);
       toast({
@@ -85,17 +98,17 @@ export default function UserManagementPage() {
   };
 
   const filteredUsers = users.filter(user => {
-    return (
- user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) || // Handle optional email
- user.phone.includes(searchTerm))
+    const nameMatch = user.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const emailMatch = user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const phoneMatch = user.phone?.toLowerCase().includes(searchTerm.toLowerCase());
+    return nameMatch || emailMatch || phoneMatch;
   });
 
   if (fetchUsersError) {
      return (
       <div className="flex flex-col items-center justify-center h-full">
         <p className="text-destructive">Error loading users: {fetchUsersError.message}</p>
-        <p className="text-muted-foreground">Please try refreshing the page or contact support.</p>
+        <p className="text-muted-foreground">Please try refreshing the page or contact support if the collection 'Users' exists and has data.</p>
       </div>
     );
   }
@@ -121,7 +134,7 @@ export default function UserManagementPage() {
           <div className="mb-4 flex items-center justify-between">
             <Input
               type="text"
-              placeholder="Filter users by name or email..."
+              placeholder="Filter users by name, email or phone..."
               className="h-10 w-full max-w-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -139,10 +152,10 @@ export default function UserManagementPage() {
                   <tr>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Name</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Created At</th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Documents</th>
- <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">User Type</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">User Type</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Created At</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Details</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border bg-background">
@@ -150,10 +163,11 @@ export default function UserManagementPage() {
                     <tr key={user.id}>
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-foreground">{user.name}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.email}</td>
-                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.createdAt}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.phone}</td>
-                      <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
- <Button variant="ghost" size="sm" onClick={() => handleOpenDetailsDialog(user)}>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.userType}</td>
+                      <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.createdAt}</td>
+                      <td className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium">
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenDetailsDialog(user)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </td>
@@ -165,18 +179,16 @@ export default function UserManagementPage() {
           )}
           {!isLoadingUsers && filteredUsers.length === 0 && (
             <p className="py-4 text-center text-muted-foreground">
-              {users.length === 0 ? 'No users found. Register one to get started.' : 'No users match your filter.'}
+              {users.length === 0 ? 'No users found. Ensure the collection "Users" exists and contains data, then register one to get started.' : 'No users match your filter.'}
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* UserRegistrationDialog */}
       <UserRegistrationDialog
         open={isRegisterDialogOpen}
         onOpenChange={setIsRegisterDialogOpen}
         onSubmit={handleRegisterUserSubmit}
-        // Pass isSubmitting if the dialog needs its own loading state control
       />
 
       {selectedUserForDetails && (
