@@ -12,7 +12,7 @@ export type Admin = {
   email: string;
   role: 'superadmin' | 'admin';
   createdAt: string;
-  passwordHash?: string; // Added for conceptual clarity, though not directly used with mock data
+  passwordHash: string;
 };
 
 export type User = {
