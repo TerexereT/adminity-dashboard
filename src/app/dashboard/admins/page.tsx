@@ -4,7 +4,6 @@
 import * as React from 'react';
 import {
   collection,
-  getDocs,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -13,6 +12,7 @@ import {
   Timestamp,
   query,
   orderBy,
+  onSnapshot, // Added for real-time updates
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { PageHeader } from "@/components/shared/page-header";
@@ -35,6 +35,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import bcrypt from 'bcryptjs';
 
+// Define adminsCollectionRef at the module level for a stable reference
+const adminsCollectionRef = collection(db, 'Admins');
+
 export default function AdminManagementPage() {
   const [admins, setAdmins] = React.useState<Admin[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -44,14 +47,12 @@ export default function AdminManagementPage() {
   const [adminToDelete, setAdminToDelete] = React.useState<Admin | null>(null);
   const { toast } = useToast();
 
-  const adminsCollectionRef = collection(db, 'Admins');
-
-  const fetchAdmins = React.useCallback(async () => {
+  React.useEffect(() => {
     setIsLoading(true);
-    try {
-      const q = query(adminsCollectionRef, orderBy('createdAt', 'desc'));
-      const data = await getDocs(q);
-      const fetchedAdmins: Admin[] = data.docs.map((doc) => {
+    const q = query(adminsCollectionRef, orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const fetchedAdmins: Admin[] = querySnapshot.docs.map((doc) => {
         const docData = doc.data();
         let createdAtString = new Date().toISOString().split('T')[0]; // Default or fallback
         if (docData.createdAt instanceof Timestamp) {
@@ -68,25 +69,24 @@ export default function AdminManagementPage() {
           email: docData.email,
           role: docData.role,
           createdAt: createdAtString,
-          passwordHash: docData.passwordHash, // Ensure passwordHash is part of the fetched data
+          passwordHash: docData.passwordHash,
         } as Admin;
       });
       setAdmins(fetchedAdmins);
-    } catch (error) {
-      console.error("Error fetching admins: ", error);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching admins with onSnapshot: ", error);
       toast({
         title: "Error Fetching Admins",
-        description: "Could not load administrator data from the database.",
+        description: "Could not load administrator data from the database in real-time.",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
-    }
-  }, [toast, adminsCollectionRef]);
+    });
 
-  React.useEffect(() => {
-    fetchAdmins();
-  }, [fetchAdmins]);
+    // Cleanup function to unsubscribe when the component unmounts
+    return () => unsubscribe();
+  }, [toast]); // toast is a stable dependency from useToast
 
   const handleOpenAddDialog = () => {
     setAdminToEdit(null);
@@ -104,13 +104,12 @@ export default function AdminManagementPage() {
   };
 
   const handleAdminFormSubmit = async (data: AdminFormData) => {
-    setIsLoading(true); // Set loading state at the beginning
+    // Form dialog has its own loading state, this page's isLoading is for the list
     try {
       const saltRounds = 10;
       if (adminToEdit) {
-        // Edit existing admin
         const adminDocRef = doc(db, 'Admins', adminToEdit.id);
-        const updateData: Partial<Omit<Admin, 'id' | 'createdAt'>> = { // Ensure correct type for updateData
+        const updateData: Partial<Omit<Admin, 'id' | 'createdAt'>> = {
           name: data.name,
           email: data.email,
           role: data.role,
@@ -122,11 +121,8 @@ export default function AdminManagementPage() {
         await updateDoc(adminDocRef, updateData);
         toast({ title: "Admin Updated", description: `${data.name} has been updated successfully.` });
       } else {
-        // Add new admin
         if (!data.password) {
-          // This should be caught by the schema, but as a fallback:
           toast({ title: "Error", description: "Password is required for new admins.", variant: "destructive" });
-          setIsLoading(false);
           return;
         }
         const hashedPassword = await bcrypt.hash(data.password, saltRounds);
@@ -140,7 +136,7 @@ export default function AdminManagementPage() {
         await addDoc(adminsCollectionRef, newAdminData);
         toast({ title: "Admin Added", description: `${data.name} has been added successfully.` });
       }
-      fetchAdmins(); 
+      // No need to call fetchAdmins(); onSnapshot will update the list.
     } catch (error) {
       console.error("Error saving admin: ", error);
       toast({
@@ -151,7 +147,6 @@ export default function AdminManagementPage() {
     } finally {
       setIsFormDialogOpen(false);
       setAdminToEdit(null);
-      setIsLoading(false); // Reset loading state
     }
   };
 
@@ -161,7 +156,7 @@ export default function AdminManagementPage() {
         const adminDocRef = doc(db, 'Admins', adminToDelete.id);
         await deleteDoc(adminDocRef);
         toast({ title: "Admin Deleted", description: `${adminToDelete.name} has been deleted.`, variant: "destructive" });
-        fetchAdmins(); 
+        // No need to call fetchAdmins(); onSnapshot will update the list.
       } catch (error) {
         console.error("Error deleting admin: ", error);
         toast({
