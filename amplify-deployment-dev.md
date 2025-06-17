@@ -13,7 +13,8 @@ This guide provides instructions for deploying the Adminity Next.js application 
     ```
     Follow the prompts to connect the CLI to your AWS account.
 3.  **Project Code**: Ensure you have the Adminity project code locally.
-4.  **n8n Chat Webhook URL (Optional)**: If you plan to use the n8n chat widget, have your n8n chat webhook URL ready.
+4.  **Firebase Project Credentials**: You will need your Firebase project configuration details (API Key, Project ID, etc.) for environment variables.
+5.  **n8n Chat Webhook URL (Optional)**: If you plan to use the n8n chat widget, have your n8n chat webhook URL ready.
 
 ## Deployment Steps
 
@@ -91,9 +92,9 @@ frontend:
 
 ### 4. Configure Environment Variables
 
-Your application requires a `JWT_SECRET_KEY`. For Genkit AI features, you might also need `GOOGLE_API_KEY`. For the chat widget, you'll need `NEXT_PUBLIC_N8N_CHAT_WEBHOOK_URL`.
+Your application requires several environment variables.
 
-**Do NOT commit your actual secret keys to your repository.**
+**Do NOT commit your actual secret keys or sensitive Firebase credentials to your repository.**
 
 In the Amplify Console:
 1.  Navigate to your app.
@@ -101,9 +102,15 @@ In the Amplify Console:
 3.  Click **Manage variables**.
 4.  Add your environment variables. For a development environment, you can use specific dev keys:
     *   `JWT_SECRET_KEY`: *Your_Strong_Development_Secret_Key_For_Amplify*
+    *   `NEXT_PUBLIC_FIREBASE_API_KEY`: *Your_Firebase_API_Key*
+    *   `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`: *Your_Firebase_Auth_Domain*
+    *   `NEXT_PUBLIC_FIREBASE_PROJECT_ID`: *Your_Firebase_Project_ID*
+    *   `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`: *Your_Firebase_Storage_Bucket*
+    *   `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`: *Your_Firebase_Messaging_Sender_ID*
+    *   `NEXT_PUBLIC_FIREBASE_APP_ID`: *Your_Firebase_App_ID*
+    *   `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID`: *Your_Firebase_Measurement_ID* (Optional)
     *   `GOOGLE_API_KEY`: *Your_Development_Google_AI_Studio_Key_For_Amplify* (if applicable)
     *   `NEXT_PUBLIC_N8N_CHAT_WEBHOOK_URL`: *Your_n8n_Chat_Webhook_URL_For_Development* (if applicable)
-    *   You might also want to set other `NEXT_PUBLIC_` prefixed variables if your client-side code needs them.
     *   Amplify automatically sets `NODE_ENV` based on the branch (e.g., `development` for non-production branches).
 
 These variables will be available during the build process and at runtime for your server-side code. Variables prefixed with `NEXT_PUBLIC_` will also be available client-side.
@@ -150,5 +157,6 @@ This setup is generally more for temporary testing due to the complexities of ex
 *   **Environment Variables**: Double-check that all required environment variables are set correctly in the Amplify Console and are accessible by your application. Prefix with `NEXT_PUBLIC_` for client-side access.
 *   **Next.js Version/Node.js Version**: Amplify supports recent LTS versions of Node.js. Ensure your project's Node.js version (specified in `package.json` engines, if any) is compatible. You can often specify a Node.js version in the Amplify Console under **Build settings > Build image settings**.
 *   **Routing Issues (404s)**: Ensure your `artifacts.baseDirectory` in `amplify.yml` is correctly set to `.next`. Amplify's Next.js compute provider handles App Router and Pages Router routing. If you encounter issues with dynamic routes, check Amplify's documentation for any specific configurations related to Next.js rewrites or redirects if you have custom ones.
+*   **Firestore Security Rules**: Ensure your Firestore security rules are correctly configured to allow access from your Amplify-hosted application. For development, you might temporarily use less restrictive rules, but remember to tighten them for production.
 
 This guide should provide a solid foundation for deploying Adminity to AWS Amplify for your development needs.
