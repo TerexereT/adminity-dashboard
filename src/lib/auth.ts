@@ -41,7 +41,7 @@ export async function createSession(userId: string, userName: string, userRole: 
   const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
   const session = await encrypt({ userId, userName, userRole, expires });
 
-  cookies().set(SESSION_COOKIE_NAME, session, { expires, httpOnly: true, secure: process.env.NODE_ENV === 'production', path: '/' });
+  (await cookies()).set(SESSION_COOKIE_NAME, session, { expires, httpOnly: true, secure: process.env.NODE_ENV === 'production', path: '/' });
 }
 
 export async function getSession() {
