@@ -53,7 +53,7 @@ export async function getSession() {
 }
 
 export async function deleteSession() {
-  cookies().delete(SESSION_COOKIE_NAME);
+  (await cookies()).delete(SESSION_COOKIE_NAME);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
