@@ -41,11 +41,16 @@ export async function createSession(userId: string, userName: string, userRole: 
   const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
   const session = await encrypt({ userId, userName, userRole, expires });
 
-  (await cookies()).set(SESSION_COOKIE_NAME, session, { expires, httpOnly: true, secure: process.env.NODE_ENV === 'production', path: '/' });
+  // Set the cookie, ensuring httpOnly and secure in production
+  (await cookies()).set(SESSION_COOKIE_NAME, session, { 
+    expires, 
+    httpOnly: true, 
+    secure: process.env.NODE_ENV === 'production', 
+    path: '/' 
+  });
 }
 
 export async function getSession() {
-  // Addressing the runtime error: "cookies() should be awaited before using its value"
   const cookieStore = await cookies(); 
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionCookie) return null;
@@ -53,7 +58,15 @@ export async function getSession() {
 }
 
 export async function deleteSession() {
-  (await cookies()).delete(SESSION_COOKIE_NAME);
+  const cookieStore = await cookies();
+  // Explicitly expire the cookie by setting its expiration date to the past
+  // and ensure all relevant attributes (like path) match the original cookie.
+  cookieStore.set(SESSION_COOKIE_NAME, '', { 
+    expires: new Date(0), 
+    path: '/',
+    httpOnly: true, // Match attributes of the original cookie
+    secure: process.env.NODE_ENV === 'production' // Match attributes of the original cookie
+  });
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
@@ -70,11 +83,9 @@ export async function findAdminByEmail(email: string): Promise<Pick<Admin, 'id' 
       return null;
     }
 
-    // Assuming email is unique, so we take the first document.
     const adminDoc = querySnapshot.docs[0];
     const adminData = adminDoc.data() as DocumentData;
 
-    // Ensure all necessary fields are present for login
     if (!adminData.name || !adminData.email || !adminData.role || !adminData.passwordHash) {
         console.error('Admin data missing required fields for login:', adminDoc.id, adminData);
         return null;
