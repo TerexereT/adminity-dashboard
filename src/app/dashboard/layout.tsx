@@ -44,7 +44,7 @@ export default async function DashboardLayout({
             {children}
           </main>
         </SidebarInset>
-        <N8nChatWidget />
+        {/* <N8nChatWidget /> */}
       </div>
   );
 }
