@@ -62,7 +62,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 export async function findAdminByEmail(email: string): Promise<Pick<Admin, 'id' | 'name' | 'email' | 'role' | 'passwordHash'> | null> {
   try {
-    const adminsRef = collection(db, 'admins');
+    const adminsRef = collection(db, 'Admins');
     const q = query(adminsRef, where('email', '==', email));
     const querySnapshot = await getDocs(q);
 

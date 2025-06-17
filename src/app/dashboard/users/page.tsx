@@ -32,7 +32,7 @@ export default function UserManagementPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const { toast } = useToast();
 
-  const usersCollectionRef = collection(db, 'users');
+  const usersCollectionRef = collection(db, 'Users');
 
   const fetchUsers = React.useCallback(async () => {
     setIsLoading(true);

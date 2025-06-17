@@ -44,7 +44,7 @@ export default function AdminManagementPage() {
   const [adminToDelete, setAdminToDelete] = React.useState<Admin | null>(null);
   const { toast } = useToast();
 
-  const adminsCollectionRef = collection(db, 'admins');
+  const adminsCollectionRef = collection(db, 'Admins');
 
   const fetchAdmins = React.useCallback(async () => {
     setIsLoading(true);
@@ -109,7 +109,7 @@ export default function AdminManagementPage() {
       const saltRounds = 10;
       if (adminToEdit) {
         // Edit existing admin
-        const adminDocRef = doc(db, 'admins', adminToEdit.id);
+        const adminDocRef = doc(db, 'Admins', adminToEdit.id);
         const updateData: Partial<Omit<Admin, 'id' | 'createdAt'>> = { // Ensure correct type for updateData
           name: data.name,
           email: data.email,
@@ -158,7 +158,7 @@ export default function AdminManagementPage() {
   const confirmDeleteAdmin = async () => {
     if (adminToDelete) {
       try {
-        const adminDocRef = doc(db, 'admins', adminToDelete.id);
+        const adminDocRef = doc(db, 'Admins', adminToDelete.id);
         await deleteDoc(adminDocRef);
         toast({ title: "Admin Deleted", description: `${adminToDelete.name} has been deleted.`, variant: "destructive" });
         fetchAdmins(); 
