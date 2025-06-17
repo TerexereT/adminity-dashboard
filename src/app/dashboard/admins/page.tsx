@@ -10,9 +10,8 @@ import {
   doc,
   serverTimestamp,
   Timestamp,
-  query,
-  orderBy,
-  onSnapshot, // Added for real-time updates
+  orderBy, // Added for constraints
+  type DocumentData, // Added for transform function
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { PageHeader } from "@/components/shared/page-header";
@@ -34,59 +33,41 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import bcrypt from 'bcryptjs';
-
-// Define adminsCollectionRef at the module level for a stable reference
-const adminsCollectionRef = collection(db, 'Admins');
+import { useFirestoreCollection } from '@/hooks/useFirestoreCollection'; // Import the hook
 
 export default function AdminManagementPage() {
-  const [admins, setAdmins] = React.useState<Admin[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
   const [isFormDialogOpen, setIsFormDialogOpen] = React.useState(false);
   const [adminToEdit, setAdminToEdit] = React.useState<Admin | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [adminToDelete, setAdminToDelete] = React.useState<Admin | null>(null);
   const { toast } = useToast();
 
-  React.useEffect(() => {
-    setIsLoading(true);
-    const q = query(adminsCollectionRef, orderBy('createdAt', 'desc'));
+  const transformAdmin = React.useCallback((id: string, data: DocumentData): Admin => {
+    let createdAtString = new Date().toISOString().split('T')[0]; // Default
+    if (data.createdAt instanceof Timestamp) {
+      createdAtString = data.createdAt.toDate().toISOString().split('T')[0];
+    } else if (typeof data.createdAt === 'string') {
+      createdAtString = data.createdAt; // Already a string
+    } else if (data.createdAt?.seconds && typeof data.createdAt.seconds === 'number') { // Firestore Timestamp-like object
+      createdAtString = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds || 0).toDate().toISOString().split('T')[0];
+    }
+    return {
+      id,
+      name: data.name || 'N/A',
+      email: data.email || 'N/A',
+      role: data.role || 'admin',
+      createdAt: createdAtString,
+      passwordHash: data.passwordHash || '',
+    } as Admin;
+  }, []);
 
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const fetchedAdmins: Admin[] = querySnapshot.docs.map((doc) => {
-        const docData = doc.data();
-        let createdAtString = new Date().toISOString().split('T')[0]; // Default or fallback
-        if (docData.createdAt instanceof Timestamp) {
-          createdAtString = docData.createdAt.toDate().toISOString().split('T')[0];
-        } else if (typeof docData.createdAt === 'string') {
-           createdAtString = docData.createdAt;
-        } else if (docData.createdAt?.seconds) { // Handle object with seconds/nanoseconds
-          createdAtString = new Timestamp(docData.createdAt.seconds, docData.createdAt.nanoseconds).toDate().toISOString().split('T')[0];
-        }
+  const adminConstraints = React.useMemo(() => [orderBy('createdAt', 'desc')], []);
 
-        return {
-          id: doc.id,
-          name: docData.name,
-          email: docData.email,
-          role: docData.role,
-          createdAt: createdAtString,
-          passwordHash: docData.passwordHash,
-        } as Admin;
-      });
-      setAdmins(fetchedAdmins);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Error fetching admins with onSnapshot: ", error);
-      toast({
-        title: "Error Fetching Admins",
-        description: "Could not load administrator data from the database in real-time.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-    });
-
-    // Cleanup function to unsubscribe when the component unmounts
-    return () => unsubscribe();
-  }, [toast]); // toast is a stable dependency from useToast
+  const { data: admins, isLoading, error: fetchAdminsError } = useFirestoreCollection<Admin>({
+    collectionName: 'Admins',
+    constraints: adminConstraints,
+    transform: transformAdmin,
+  });
 
   const handleOpenAddDialog = () => {
     setAdminToEdit(null);
@@ -104,7 +85,6 @@ export default function AdminManagementPage() {
   };
 
   const handleAdminFormSubmit = async (data: AdminFormData) => {
-    // Form dialog has its own loading state, this page's isLoading is for the list
     try {
       const saltRounds = 10;
       if (adminToEdit) {
@@ -133,10 +113,9 @@ export default function AdminManagementPage() {
           passwordHash: hashedPassword,
           createdAt: serverTimestamp(), 
         };
-        await addDoc(adminsCollectionRef, newAdminData);
+        await addDoc(collection(db, 'Admins'), newAdminData);
         toast({ title: "Admin Added", description: `${data.name} has been added successfully.` });
       }
-      // No need to call fetchAdmins(); onSnapshot will update the list.
     } catch (error) {
       console.error("Error saving admin: ", error);
       toast({
@@ -156,7 +135,6 @@ export default function AdminManagementPage() {
         const adminDocRef = doc(db, 'Admins', adminToDelete.id);
         await deleteDoc(adminDocRef);
         toast({ title: "Admin Deleted", description: `${adminToDelete.name} has been deleted.`, variant: "destructive" });
-        // No need to call fetchAdmins(); onSnapshot will update the list.
       } catch (error) {
         console.error("Error deleting admin: ", error);
         toast({
@@ -170,6 +148,15 @@ export default function AdminManagementPage() {
       }
     }
   };
+
+  if (fetchAdminsError) {
+     return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <p className="text-destructive">Error loading administrators: {fetchAdminsError.message}</p>
+        <p className="text-muted-foreground">Please try refreshing the page or contact support.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,5 @@
 
-'use client'; // Required for useState, useEffect if fetching data client-side
+'use client';
 
 import * as React from 'react';
 import { PageHeader } from "@/components/shared/page-header";
@@ -7,13 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Download, FileText, Image as ImageIcon, FileType2, Loader2 } from "lucide-react";
-import type { UserDocument } from '@/lib/types'; // Assuming UserDocument type exists
+import type { UserDocument } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestoreCollection } from '@/hooks/useFirestoreCollection'; // Import the hook
+import { orderBy, Timestamp, type DocumentData } from 'firebase/firestore'; // Import for constraints
 
-// Mock data removed, replace with actual data fetching
-// const mockDocuments = [ ... ];
-
-const getFileIcon = (fileType?: string) => { // Make fileType optional or provide a default
+const getFileIcon = (fileType?: string) => {
   switch (fileType?.toUpperCase()) {
     case 'PDF':
       return <FileText className="h-5 w-5 text-red-500" />;
@@ -29,32 +28,53 @@ const getFileIcon = (fileType?: string) => { // Make fileType optional or provid
 };
 
 export default function DocumentManagementPage() {
-  const [documents, setDocuments] = React.useState<UserDocument[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState('');
-  const { toast } = useToast();
+  const { toast } = useToast(); // Keep toast if needed for other actions
 
-  // Placeholder for fetching documents - implement this with Firestore
-  React.useEffect(() => {
-    const fetchDocuments = async () => {
-      setIsLoading(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // In a real app, fetch from Firestore here and setDocuments
-      // For now, it will remain empty
-      setDocuments([]); 
-      setIsLoading(false);
-      // Example error toast if fetching failed:
-      // toast({ title: "Error", description: "Could not fetch documents.", variant: "destructive" });
-    };
-    fetchDocuments();
-  }, [toast]);
+  const transformDocument = React.useCallback((id: string, data: DocumentData): UserDocument => {
+    let uploadDateString = new Date().toISOString().split('T')[0]; // Default
+    if (data.uploadDate instanceof Timestamp) {
+      uploadDateString = data.uploadDate.toDate().toISOString().split('T')[0];
+    } else if (typeof data.uploadDate === 'string') {
+      uploadDateString = data.uploadDate;
+    } else if (data.uploadDate?.seconds && typeof data.uploadDate.seconds === 'number') {
+      uploadDateString = new Timestamp(data.uploadDate.seconds, data.uploadDate.nanoseconds || 0).toDate().toISOString().split('T')[0];
+    }
+    
+    return {
+      id,
+      userId: data.userId || 'N/A',
+      userName: data.userName, // Optional, might not be present
+      fileName: data.fileName || 'Untitled',
+      fileType: data.fileType || 'UNKNOWN', // Ensure fileType is a valid UserDocument['fileType']
+      uploadDate: uploadDateString,
+      url: data.url || '#', // Placeholder URL
+    } as UserDocument;
+  }, []);
+
+  // Assuming documents should be ordered by uploadDate, change if needed
+  const documentConstraints = React.useMemo(() => [orderBy('uploadDate', 'desc')], []); 
+
+  const { data: documents, isLoading, error: fetchDocumentsError } = useFirestoreCollection<UserDocument>({
+    collectionName: 'UserDocuments', // Replace with your actual collection name
+    constraints: documentConstraints,
+    transform: transformDocument,
+  });
 
   const filteredDocuments = documents.filter(doc =>
     doc.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (doc.userName && doc.userName.toLowerCase().includes(searchTerm.toLowerCase())) ||
     doc.userId.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (fetchDocumentsError) {
+    return (
+     <div className="flex flex-col items-center justify-center h-full">
+       <p className="text-destructive">Error loading documents: {fetchDocumentsError.message}</p>
+       <p className="text-muted-foreground">Please try refreshing the page or contact support.</p>
+     </div>
+   );
+ }
 
   return (
     <div className="space-y-6">
@@ -126,7 +146,7 @@ export default function DocumentManagementPage() {
           )}
           {!isLoading && filteredDocuments.length === 0 && (
              <p className="py-4 text-center text-muted-foreground">
-                {documents.length === 0 ? 'No documents found in the system.' : 'No documents match your filter.'}
+                {documents.length === 0 ? 'No documents found in the system. Please ensure the collection "UserDocuments" exists and contains data.' : 'No documents match your filter.'}
              </p>
           )}
         </CardContent>

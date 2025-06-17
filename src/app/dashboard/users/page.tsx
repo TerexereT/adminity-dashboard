@@ -4,12 +4,11 @@
 import * as React from 'react';
 import {
   collection,
-  getDocs,
   addDoc,
   serverTimestamp,
   Timestamp,
-  query,
-  orderBy,
+  orderBy, // Added for constraints
+  type DocumentData, // Added for transform
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { PageHeader } from "@/components/shared/page-header";
@@ -22,60 +21,42 @@ import type { UserRegistrationFormData } from '@/lib/schemas';
 import { UserRegistrationDialog } from '@/components/user/user-registration-dialog';
 import { UserDetailsDialog } from '@/components/user/user-details-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestoreCollection } from '@/hooks/useFirestoreCollection'; // Import the hook
 
 export default function UserManagementPage() {
-  const [users, setUsers] = React.useState<User[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = React.useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = React.useState(false);
   const [selectedUserForDetails, setSelectedUserForDetails] = React.useState<User | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false); // For form submission loading state
   const { toast } = useToast();
 
-  const usersCollectionRef = collection(db, 'Users');
-
-  const fetchUsers = React.useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const q = query(usersCollectionRef, orderBy('registrationDate', 'desc'));
-      const data = await getDocs(q);
-      const fetchedUsers: User[] = data.docs.map((doc) => {
-        const docData = doc.data();
-        let registrationDateString = new Date().toISOString().split('T')[0]; // Default or fallback
-        
-        if (docData.registrationDate instanceof Timestamp) {
-          registrationDateString = docData.registrationDate.toDate().toISOString().split('T')[0];
-        } else if (typeof docData.registrationDate === 'string') {
-           registrationDateString = docData.registrationDate;
-        } else if (docData.registrationDate?.seconds) { 
-          registrationDateString = new Timestamp(docData.registrationDate.seconds, docData.registrationDate.nanoseconds).toDate().toISOString().split('T')[0];
-        }
-
-        return {
-          id: doc.id,
-          name: docData.name,
-          email: docData.email,
-          registrationDate: registrationDateString,
-          surveyCount: docData.surveyCount || 0,
-          documentCount: docData.documentCount || 0,
-        } as User;
-      });
-      setUsers(fetchedUsers);
-    } catch (error) {
-      console.error("Error fetching users: ", error);
-      toast({
-        title: "Error Fetching Users",
-        description: "Could not load user data from the database.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+  const transformUser = React.useCallback((id: string, data: DocumentData): User => {
+    let registrationDateString = new Date().toISOString().split('T')[0]; // Default
+    if (data.registrationDate instanceof Timestamp) {
+      registrationDateString = data.registrationDate.toDate().toISOString().split('T')[0];
+    } else if (typeof data.registrationDate === 'string') {
+      registrationDateString = data.registrationDate;
+    } else if (data.registrationDate?.seconds && typeof data.registrationDate.seconds === 'number') {
+      registrationDateString = new Timestamp(data.registrationDate.seconds, data.registrationDate.nanoseconds || 0).toDate().toISOString().split('T')[0];
     }
-  }, [toast, usersCollectionRef]);
+    return {
+      id,
+      name: data.name || 'N/A',
+      email: data.email || 'N/A',
+      registrationDate: registrationDateString,
+      surveyCount: data.surveyCount || 0,
+      documentCount: data.documentCount || 0,
+    } as User;
+  }, []);
 
-  React.useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+  const userConstraints = React.useMemo(() => [orderBy('registrationDate', 'desc')], []);
+
+  const { data: users, isLoading: isLoadingUsers, error: fetchUsersError } = useFirestoreCollection<User>({
+    collectionName: 'Users',
+    constraints: userConstraints,
+    transform: transformUser,
+  });
 
   const handleOpenRegisterDialog = () => {
     setIsRegisterDialogOpen(true);
@@ -87,18 +68,18 @@ export default function UserManagementPage() {
   };
 
   const handleRegisterUserSubmit = async (data: UserRegistrationFormData) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
     try {
       const newUserFirestoreData = {
         name: data.name,
         email: data.email,
-        registrationDate: serverTimestamp(), // Firestore will convert this to a Timestamp
+        registrationDate: serverTimestamp(),
         surveyCount: 0,
         documentCount: 0,
       };
-      await addDoc(usersCollectionRef, newUserFirestoreData);
+      await addDoc(collection(db, 'Users'), newUserFirestoreData);
       toast({ title: "User Registered", description: `${data.name} has been registered successfully.` });
-      fetchUsers(); // Refresh the list
+      // No need to manually refetch, onSnapshot handles it.
     } catch (error) {
       console.error("Error registering user: ", error);
       toast({
@@ -108,7 +89,7 @@ export default function UserManagementPage() {
       });
     } finally {
       setIsRegisterDialogOpen(false);
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -116,6 +97,15 @@ export default function UserManagementPage() {
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (fetchUsersError) {
+     return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <p className="text-destructive">Error loading users: {fetchUsersError.message}</p>
+        <p className="text-muted-foreground">Please try refreshing the page or contact support.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -144,7 +134,7 @@ export default function UserManagementPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          {isLoading ? (
+          {isLoadingUsers ? (
             <div className="flex justify-center items-center py-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="ml-2 text-muted-foreground">Loading users...</p>
@@ -181,7 +171,7 @@ export default function UserManagementPage() {
               </table>
             </div>
           )}
-          {!isLoading && filteredUsers.length === 0 && (
+          {!isLoadingUsers && filteredUsers.length === 0 && (
             <p className="py-4 text-center text-muted-foreground">
               {users.length === 0 ? 'No users found. Register one to get started.' : 'No users match your filter.'}
             </p>
@@ -193,6 +183,7 @@ export default function UserManagementPage() {
         open={isRegisterDialogOpen}
         onOpenChange={setIsRegisterDialogOpen}
         onSubmit={handleRegisterUserSubmit}
+        // Pass isSubmitting if the dialog needs its own loading state control
       />
 
       {selectedUserForDetails && (
