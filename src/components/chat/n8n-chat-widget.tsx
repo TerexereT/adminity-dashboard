@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -21,8 +20,18 @@ export const N8nChatWidget = () => {
       showWelcomeScreen: false,
       defaultLanguage: 'en',
       initialMessages: [
-        'Hi there! 👋',
+        'Enter your number to start',
       ],
+      i18n: {
+        en: {
+          title: 'Adminity Chat',
+          subtitle: "manage your activities here.",
+          footer: '',
+          getStarted: 'New Conversation',
+          inputPlaceholder: 'Type your question..',
+          closeButtonTooltip: ''
+        },
+      },
 		});
 	}, []);
 
