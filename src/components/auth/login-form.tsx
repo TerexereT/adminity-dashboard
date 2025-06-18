@@ -29,25 +29,24 @@ export function LoginForm() {
 
   async function onSubmit(data: LoginFormData) {
     setIsLoading(true);
-    try {
-      const result = await login(data);
-      if (result?.error) {
-        toast({
-          title: 'Login Failed',
-          description: result.error,
-          variant: 'destructive',
-        });
-      }
-      // Successful login will redirect via server action, so no client-side redirect needed here.
-    } catch (error) {
+    const result = await login(data); // Call the server action
+
+    // After the await, if login was successful, the server action
+    // would have already called redirect(), which throws an error
+    // that Next.js handles. The code below will only be reached if
+    // the server action returned an error object instead of redirecting.
+
+    if (result?.error) {
       toast({
-        title: 'An Unexpected Error Occurred',
-        description: 'Please try again later.',
+        title: 'Login Failed',
+        description: result.error,
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Stop loading only if there was an error
     }
+    // If no error is returned, the redirect happened and
+    // Next.js will handle the navigation. setIsLoading will
+    // be reset by the page transition.
   }
 
   return (
