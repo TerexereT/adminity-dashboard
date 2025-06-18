@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -42,10 +43,10 @@ export function SidebarNav({ items, isCollapsed }: SidebarNavProps) {
             variant="default"
             size="default"
             className={cn(
-              "w-full justify-start",
+              "w-full justify-center", // Changed from justify-start to justify-center
               isActive && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
-              !isActive && "hover:bg-accent/50",
-              isCollapsed && "justify-center"
+              !isActive && "hover:bg-accent/50"
+              // isCollapsed && "justify-center" // This is now handled by the base "justify-center"
             )}
             isActive={isActive}
           >
