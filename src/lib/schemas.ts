@@ -92,3 +92,7 @@ export const UserRegistrationSchema = z.object({
 
 export type UserRegistrationFormData = z.infer<typeof UserRegistrationSchema>;
 
+export const ProcessDocumentSchema = z.object({
+  url: z.string().url({ message: "Please enter a valid URL." }),
+});
+export type ProcessDocumentFormData = z.infer<typeof ProcessDocumentSchema>;

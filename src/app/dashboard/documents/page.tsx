@@ -6,13 +6,14 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Download, FileText, Link as LinkIcon, Loader2 } from "lucide-react";
+import { Download, FileText, Link as LinkIcon, Loader2, PlusCircle } from "lucide-react";
 import type { AppDocument } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestoreCollection } from '@/hooks/useFirestoreCollection';
 import { type DocumentData } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
+import { ProcessDocumentDialog } from '@/components/document/process-document-dialog';
 
 const getFileIcon = (_doc: AppDocument) => {
   // Based on image, doc.fileType exists
@@ -30,11 +31,12 @@ const documentBases = [
 export default function DocumentManagementPage() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedCollection, setSelectedCollection] = React.useState<string>(documentBases[0].value);
+  const [isProcessDialogOpen, setIsProcessDialogOpen] = React.useState(false);
   const { toast } = useToast();
 
   const transformDocument = React.useCallback((id: string, data: DocumentData): AppDocument => {
     const docTags = Array.isArray(data.tags)
-      ? data.tags.filter((tag: any) => typeof tag === 'string') // Ensure tags are strings
+      ? data.tags.filter((tag: any) => typeof tag === 'string')
       : (typeof data.tags === 'string' ? data.tags.split(',').map(t => t.trim()) : []);
 
     return {
@@ -48,13 +50,11 @@ export default function DocumentManagementPage() {
       fileType: typeof data.fileType === 'string' ? data.fileType : undefined,
       description: typeof data.description === 'string' ? data.description : undefined,
       errorMessage: typeof data.errorMessage === 'string' ? data.errorMessage : undefined,
-      // Optional fields
       userId: data.userId,
       userName: data.userName,
     } as AppDocument;
   }, []);
 
-  // Removed orderBy constraint as per user request
   const documentConstraints = React.useMemo(() => [], []);
 
   const { data: documents, isLoading, error: fetchDocumentsError } = useFirestoreCollection<AppDocument>({
@@ -70,6 +70,23 @@ export default function DocumentManagementPage() {
     return titleMatch || tagsMatch;
   });
 
+  const handleProcessDocumentSuccess = () => {
+    toast({
+      title: "Document Processing Initiated",
+      description: "The document URL has been sent for processing.",
+    });
+    // Optionally, trigger a re-fetch or rely on real-time updates if the webhook modifies this collection.
+  };
+
+  const handleProcessDocumentError = (errorMessage: string) => {
+    toast({
+      title: "Processing Error",
+      description: errorMessage || "Could not process the document URL.",
+      variant: "destructive",
+    });
+  };
+
+
   if (fetchDocumentsError) {
     return (
      <div className="flex flex-col items-center justify-center h-full">
@@ -83,8 +100,13 @@ export default function DocumentManagementPage() {
     <div className="space-y-6">
       <PageHeader
         title="Document Management"
-        description="Access and manage documents securely."
-      />
+        description="Access and manage documents securely. Process new documents via URL."
+      >
+        <Button onClick={() => setIsProcessDialogOpen(true)}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Process Document
+        </Button>
+      </PageHeader>
 
       <Card>
         <CardHeader>
@@ -141,21 +163,21 @@ export default function DocumentManagementPage() {
                       {getFileIcon(doc)}
                       <span className="ml-2 truncate" title={doc.title}>{doc.title}</span>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{doc.accessLevel}</td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground text-center">{doc.accessLevel}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground text-center">
                       <Badge variant={doc.status === 'published' ? 'default' : (doc.status === 'pending' ? 'secondary' : 'outline')}>
                         {doc.status}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      <div className="flex flex-wrap gap-1 w-40">
+                    <td className="px-6 py-4 text-sm text-muted-foreground text-center">
+                      <div className="flex flex-wrap gap-1 w-40 justify-center">
                         {doc.tags.slice(0, 3).map(tag => (
                           <Badge key={tag} variant="outline" className="truncate">{tag}</Badge>
                         ))}
                         {doc.tags.length > 3 && <Badge variant="outline">...</Badge>}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{doc.lastProcessed}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground text-center">{doc.lastProcessed}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium space-x-2">
                       {doc.url && doc.url !== '#' && (
                         <Button variant="outline" size="sm" asChild>
@@ -165,7 +187,7 @@ export default function DocumentManagementPage() {
                           </a>
                         </Button>
                       )}
-                       {doc.url && doc.url !== '#' && doc.fileType === 'pdf' && ( // Example condition to show download
+                       {doc.url && doc.url !== '#' && doc.fileType === 'pdf' && ( 
                          <Button variant="ghost" size="sm" asChild>
                            <a href={doc.url} download={doc.title.endsWith('.pdf') ? doc.title : `${doc.title}.pdf`}>
                              <Download className="mr-2 h-4 w-4" />
@@ -183,12 +205,18 @@ export default function DocumentManagementPage() {
           {!isLoading && filteredDocuments.length === 0 && (
              <p className="py-4 text-center text-muted-foreground">
                 {documents.length === 0 
-                  ? `No documents found in the "${documentBases.find(db => db.value === selectedCollection)?.label}" collection. Ensure this collection exists and contains data.` 
+                  ? `No documents found in the "${documentBases.find(db => db.value === selectedCollection)?.label}" collection. Ensure this collection exists, contains data, and that documents have the 'lastProcessed' field.` 
                   : 'No documents match your filter.'}
              </p>
           )}
         </CardContent>
       </Card>
+      <ProcessDocumentDialog
+        open={isProcessDialogOpen}
+        onOpenChange={setIsProcessDialogOpen}
+        onSuccess={handleProcessDocumentSuccess}
+        onError={handleProcessDocumentError}
+      />
     </div>
   );
 }
