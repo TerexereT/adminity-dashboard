@@ -7,22 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Download, FileText, Link as LinkIcon, Loader2 } from "lucide-react";
-import type { AppDocument } from '@/lib/types'; // Updated type
+import type { AppDocument } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestoreCollection } from '@/hooks/useFirestoreCollection';
 import { orderBy, Timestamp, type DocumentData } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 
-// Simplified generic file icon
 const getFileIcon = (_doc: AppDocument) => {
   return <FileText className="h-5 w-5 text-muted-foreground" />;
 };
 
 const documentBases = [
   { value: 'general_info', label: 'General Information' },
-  // Add other document bases (collections) here in the future
-  // { value: 'UserDocuments', label: 'User Uploads' },
+  // { value: 'UserDocuments', label: 'User Uploads' }, // Example for future
 ];
 
 export default function DocumentManagementPage() {
@@ -31,27 +29,35 @@ export default function DocumentManagementPage() {
   const { toast } = useToast();
 
   const transformDocument = React.useCallback((id: string, data: DocumentData): AppDocument => {
-    let updatedAtString = new Date().toISOString().split('T')[0];
-    if (data.updatedAt instanceof Timestamp) {
-      updatedAtString = data.updatedAt.toDate().toISOString().split('T')[0];
-    } else if (typeof data.updatedAt === 'string') {
-      updatedAtString = data.updatedAt;
-    } else if (data.updatedAt?.seconds && typeof data.updatedAt.seconds === 'number') {
-      updatedAtString = new Timestamp(data.updatedAt.seconds, data.updatedAt.nanoseconds || 0).toDate().toISOString().split('T')[0];
-    } else if (data.uploadDate instanceof Timestamp) { // Fallback for older UserDocuments structure
-        updatedAtString = data.uploadDate.toDate().toISOString().split('T')[0];
-    }
+    let updatedAtString = new Date().toISOString().split('T')[0]; // Default if no valid timestamp
 
+    const timestampSource = data.updatedAt; // Primarily expect 'updatedAt'
+
+    if (timestampSource instanceof Timestamp) {
+      updatedAtString = timestampSource.toDate().toISOString().split('T')[0];
+    } else if (typeof timestampSource === 'string') {
+      const parsedDate = new Date(timestampSource);
+      if (!isNaN(parsedDate.getTime())) {
+        updatedAtString = parsedDate.toISOString().split('T')[0];
+      }
+    } else if (timestampSource?.seconds && typeof timestampSource.seconds === 'number') {
+      updatedAtString = new Timestamp(timestampSource.seconds, timestampSource.nanoseconds || 0).toDate().toISOString().split('T')[0];
+    }
+    // If after all checks, updatedAtString is still the default, it means no valid 'updatedAt' field was found or parsable.
+
+    const docTags = Array.isArray(data.tags)
+      ? data.tags
+      : (typeof data.tags === 'string' ? data.tags.split(',').map(t => t.trim()) : []);
 
     return {
       id,
-      title: data.title || data.fileName || 'Untitled', // Fallback to fileName for UserDocuments
-      url: data.url || '#',
-      accessLevel: data.accessLevel || 'N/A',
-      status: data.status || 'N/A',
-      tags: Array.isArray(data.tags) ? data.tags : (typeof data.tags === 'string' ? data.tags.split(',').map(t => t.trim()) : []),
+      title: typeof data.title === 'string' ? data.title : 'Untitled Document',
+      url: typeof data.url === 'string' ? data.url : '#',
+      accessLevel: typeof data.accessLevel === 'string' ? data.accessLevel : 'N/A',
+      status: typeof data.status === 'string' ? data.status : 'Pending',
+      tags: docTags,
       updatedAt: updatedAtString,
-      // Include UserDocuments specific fields if needed, and if `selectedCollection` logic is expanded
+      // Optional fields, good to have in the type definition
       userId: data.userId,
       userName: data.userName,
       fileType: data.fileType,
@@ -70,9 +76,6 @@ export default function DocumentManagementPage() {
     const searchTermLower = searchTerm.toLowerCase();
     const titleMatch = doc.title.toLowerCase().includes(searchTermLower);
     const tagsMatch = doc.tags.some(tag => tag.toLowerCase().includes(searchTermLower));
-    // Keep previous UserDocuments specific search if needed, can be conditional on selectedCollection
-    // const userNameMatch = doc.userName && doc.userName.toLowerCase().includes(searchTermLower);
-    // const userIdMatch = doc.userId && doc.userId.toLowerCase().includes(searchTermLower);
     return titleMatch || tagsMatch;
   });
 
@@ -171,7 +174,6 @@ export default function DocumentManagementPage() {
                           </a>
                         </Button>
                       )}
-                      {/* For UserDocuments, a download button might be more appropriate if URL is for direct download */}
                        {selectedCollection === 'UserDocuments' && doc.url && doc.url !== '#' && (
                          <Button variant="ghost" size="sm" asChild>
                            <a href={doc.url} download={doc.title}>
@@ -189,7 +191,9 @@ export default function DocumentManagementPage() {
           )}
           {!isLoading && filteredDocuments.length === 0 && (
              <p className="py-4 text-center text-muted-foreground">
-                {documents.length === 0 ? `No documents found in the "${selectedCollection}" collection. Ensure it exists and contains data.` : 'No documents match your filter.'}
+                {documents.length === 0 
+                  ? `No documents found in the "${selectedCollection}" collection. Ensure this collection exists, contains data, and that documents have an 'updatedAt' field (e.g., a Timestamp) for sorting.` 
+                  : 'No documents match your filter.'}
              </p>
           )}
         </CardContent>
@@ -197,3 +201,4 @@ export default function DocumentManagementPage() {
     </div>
   );
 }
+
