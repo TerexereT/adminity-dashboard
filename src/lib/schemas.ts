@@ -79,9 +79,15 @@ export type AdminFormData = z.infer<typeof AdminFormSchema>;
 
 export const UserRegistrationSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
-  email: z.string().email({ message: 'Invalid email address.' }).optional(),
+  email: z.string().email({ message: 'Invalid email address.' }).optional().or(z.literal('')),
   phone: z.string().min(1, { message: 'Phone number is required.' }),
-  userType: z.number(),
+  userType: z.number({
+    required_error: "User type is required.",
+    invalid_type_error: "User type must be a number.",
+  })
+  .int({ message: "User type must be a whole number." })
+  .min(0, { message: "User type must be 0, 1, or 2." })
+  .max(2, { message: "User type must be 0, 1, or 2." }),
 });
 
 export type UserRegistrationFormData = z.infer<typeof UserRegistrationSchema>;

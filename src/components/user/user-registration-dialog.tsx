@@ -40,6 +40,8 @@ export function UserRegistrationDialog({ open, onOpenChange, onSubmit }: UserReg
     defaultValues: {
       name: '',
       email: '',
+      phone: '',
+      userType: 0,
     },
   });
 
@@ -49,7 +51,7 @@ export function UserRegistrationDialog({ open, onOpenChange, onSubmit }: UserReg
         name: '',
         email: '',
         phone: '',
-        userType: 0, // Or a default value that makes sense for your application
+        userType: 0, 
       });
     }
   }, [open, form]);
@@ -92,7 +94,7 @@ export function UserRegistrationDialog({ open, onOpenChange, onSubmit }: UserReg
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email Address</FormLabel>
+                  <FormLabel>Email Address (Optional)</FormLabel>
  <FormControl>
                     <Input type="email" placeholder="user@example.com" {...field} />
                   </FormControl>
@@ -118,9 +120,20 @@ export function UserRegistrationDialog({ open, onOpenChange, onSubmit }: UserReg
               name="userType"
               render={({ field }) => (
                 <FormItem>
- <FormLabel>User Type</FormLabel>
+ <FormLabel>User Type (0-2)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="0" {...field} onChange={e => field.onChange(parseInt(e.target.value, 10))} />
+                    <Input 
+                      type="number" 
+                      placeholder="0" 
+                      {...field} 
+                      onChange={e => {
+                        const value = e.target.value;
+                        // Allow empty input for clearing, or parse as int
+                        field.onChange(value === '' ? '' : parseInt(value, 10));
+                      }}
+                      min="0"
+                      max="2"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
