@@ -126,11 +126,11 @@ export default function DocumentManagementPage() {
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground w-[35%]">Title</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Access Level</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Status</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Tags</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Last Processed</th>
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground w-[35%]">Title</th>
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Access Level</th>
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Status</th>
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Tags</th>
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Last Processed</th>
                   <th scope="col" className="relative px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
                 </tr>
               </thead>

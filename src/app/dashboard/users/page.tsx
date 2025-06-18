@@ -150,12 +150,12 @@ export default function UserManagementPage() {
               <table className="min-w-full divide-y divide-border">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Name</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">User Type</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Created At</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Details</th>
+                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Name</th>
+                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Email</th>
+                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Phone</th>
+                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">User Type</th>
+                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Created At</th>
+                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">Details</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border bg-background">
@@ -166,7 +166,7 @@ export default function UserManagementPage() {
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.phone}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.userType}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{user.createdAt}</td>
-                      <td className="whitespace-nowrap px-6 py-4 text-left text-sm font-medium">
+                      <td className="whitespace-nowrap px-6 py-4 text-center text-sm font-medium">
                         <Button variant="ghost" size="sm" onClick={() => handleOpenDetailsDialog(user)}>
                           <Eye className="h-4 w-4" />
                         </Button>
