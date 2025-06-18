@@ -46,7 +46,7 @@ export function SidebarNav({ items, isCollapsed }: SidebarNavProps) {
               "w-full justify-start",
               isActive && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
               !isActive && "hover:bg-accent/50",
-              isCollapsed && "justify-center items-center"
+              isCollapsed && "justify-center" // Reverted: items-center removed from here
             )}
             isActive={isActive}
           >
