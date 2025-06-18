@@ -28,8 +28,8 @@ export async function login(formData: LoginFormData) {
     
     // Credentials are valid, now attempt to create session
     try {
-      // await createSession(admin.id, admin.name, admin.role);
-      await createSession('admin.id', 'admin.name', 'superadmin');
+      await createSession(admin.id, admin.name, admin.role);
+      // await createSession('admin.id', 'admin.name', 'superadmin');
       sessionCreatedSuccessfully = true;
     } catch (sessionError) {
       console.error('Session creation error:', sessionError);
