@@ -22,6 +22,8 @@ const firebaseConfig: FirebaseOptions = {
   measurementId: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID, // Optional
 };
 
+console.log(firebaseConfig);
+
 const requiredEnvVars = [
   'NEXT_PUBLIC_FIREBASE_API_KEY',
   'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
