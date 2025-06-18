@@ -43,10 +43,10 @@ export function SidebarNav({ items, isCollapsed }: SidebarNavProps) {
             variant="default"
             size="default"
             className={cn(
-              "w-full justify-center", // Changed from justify-start to justify-center
+              "w-full justify-start", // Reverted to justify-start
               isActive && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
-              !isActive && "hover:bg-accent/50"
-              // isCollapsed && "justify-center" // This is now handled by the base "justify-center"
+              !isActive && "hover:bg-accent/50",
+              isCollapsed && "justify-center" // Conditionally apply justify-center when collapsed
             )}
             isActive={isActive}
           >
