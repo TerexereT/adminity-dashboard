@@ -44,11 +44,13 @@ export type AppDocument = {
   accessLevel: string;
   status: string;
   tags: string[]; // Assuming tags are an array of strings
-  updatedAt: string; // For sorting, from Firestore Timestamp
+  lastProcessed: string; // For display, from Firestore string field
   // Optional fields that might exist in some collections
   userId?: string;
   userName?: string;
   fileType?: string; // Could be used for icons if available
+  description?: string; // Added based on image
+  errorMessage?: string; // Added based on image
 };
 
 // Represents a generic table column definition for the DataTable component
@@ -60,3 +62,4 @@ export interface DataTableColumn<TData> {
   enableHiding?: boolean;
   meta?: any; // Additional metadata for the column
 }
+

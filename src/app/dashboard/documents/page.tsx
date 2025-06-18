@@ -10,11 +10,15 @@ import { Download, FileText, Link as LinkIcon, Loader2 } from "lucide-react";
 import type { AppDocument } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestoreCollection } from '@/hooks/useFirestoreCollection';
-import { orderBy, Timestamp, type DocumentData } from 'firebase/firestore';
+import { type DocumentData } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 
 const getFileIcon = (_doc: AppDocument) => {
+  // Based on image, doc.fileType exists
+  if (_doc.fileType === 'pdf') {
+    return <FileText className="h-5 w-5 text-red-500" />;
+  }
   return <FileText className="h-5 w-5 text-muted-foreground" />;
 };
 
@@ -29,24 +33,8 @@ export default function DocumentManagementPage() {
   const { toast } = useToast();
 
   const transformDocument = React.useCallback((id: string, data: DocumentData): AppDocument => {
-    let updatedAtString = new Date().toISOString().split('T')[0]; // Default if no valid timestamp
-
-    const timestampSource = data.updatedAt; // Primarily expect 'updatedAt'
-
-    if (timestampSource instanceof Timestamp) {
-      updatedAtString = timestampSource.toDate().toISOString().split('T')[0];
-    } else if (typeof timestampSource === 'string') {
-      const parsedDate = new Date(timestampSource);
-      if (!isNaN(parsedDate.getTime())) {
-        updatedAtString = parsedDate.toISOString().split('T')[0];
-      }
-    } else if (timestampSource?.seconds && typeof timestampSource.seconds === 'number') {
-      updatedAtString = new Timestamp(timestampSource.seconds, timestampSource.nanoseconds || 0).toDate().toISOString().split('T')[0];
-    }
-    // If after all checks, updatedAtString is still the default, it means no valid 'updatedAt' field was found or parsable.
-
     const docTags = Array.isArray(data.tags)
-      ? data.tags
+      ? data.tags.filter((tag: any) => typeof tag === 'string') // Ensure tags are strings
       : (typeof data.tags === 'string' ? data.tags.split(',').map(t => t.trim()) : []);
 
     return {
@@ -56,15 +44,18 @@ export default function DocumentManagementPage() {
       accessLevel: typeof data.accessLevel === 'string' ? data.accessLevel : 'N/A',
       status: typeof data.status === 'string' ? data.status : 'Pending',
       tags: docTags,
-      updatedAt: updatedAtString,
-      // Optional fields, good to have in the type definition
+      lastProcessed: typeof data.lastProcessed === 'string' ? data.lastProcessed : 'N/A',
+      fileType: typeof data.fileType === 'string' ? data.fileType : undefined,
+      description: typeof data.description === 'string' ? data.description : undefined,
+      errorMessage: typeof data.errorMessage === 'string' ? data.errorMessage : undefined,
+      // Optional fields
       userId: data.userId,
       userName: data.userName,
-      fileType: data.fileType,
     } as AppDocument;
   }, []);
 
-  const documentConstraints = React.useMemo(() => [orderBy('updatedAt', 'desc')], []);
+  // Removed orderBy constraint as per user request
+  const documentConstraints = React.useMemo(() => [], []);
 
   const { data: documents, isLoading, error: fetchDocumentsError } = useFirestoreCollection<AppDocument>({
     collectionName: selectedCollection,
@@ -135,11 +126,11 @@ export default function DocumentManagementPage() {
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-muted/50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground w-[40%]">Title</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground w-[35%]">Title</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Access Level</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Status</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Tags</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Updated At</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">Last Processed</th>
                   <th scope="col" className="relative px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</th>
                 </tr>
               </thead>
@@ -152,19 +143,19 @@ export default function DocumentManagementPage() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{doc.accessLevel}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
-                      <Badge variant={doc.status === 'published' ? 'default' : 'secondary'}>
+                      <Badge variant={doc.status === 'published' ? 'default' : (doc.status === 'pending' ? 'secondary' : 'outline')}>
                         {doc.status}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">
-                      <div className="flex flex-wrap gap-1 w-48">
+                      <div className="flex flex-wrap gap-1 w-40">
                         {doc.tags.slice(0, 3).map(tag => (
                           <Badge key={tag} variant="outline" className="truncate">{tag}</Badge>
                         ))}
                         {doc.tags.length > 3 && <Badge variant="outline">...</Badge>}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{doc.updatedAt}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">{doc.lastProcessed}</td>
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium space-x-2">
                       {doc.url && doc.url !== '#' && (
                         <Button variant="outline" size="sm" asChild>
@@ -174,9 +165,9 @@ export default function DocumentManagementPage() {
                           </a>
                         </Button>
                       )}
-                       {selectedCollection === 'UserDocuments' && doc.url && doc.url !== '#' && (
+                       {doc.url && doc.url !== '#' && doc.fileType === 'pdf' && ( // Example condition to show download
                          <Button variant="ghost" size="sm" asChild>
-                           <a href={doc.url} download={doc.title}>
+                           <a href={doc.url} download={doc.title.endsWith('.pdf') ? doc.title : `${doc.title}.pdf`}>
                              <Download className="mr-2 h-4 w-4" />
                              Download
                            </a>
@@ -192,7 +183,7 @@ export default function DocumentManagementPage() {
           {!isLoading && filteredDocuments.length === 0 && (
              <p className="py-4 text-center text-muted-foreground">
                 {documents.length === 0 
-                  ? `No documents found in the "${selectedCollection}" collection. Ensure this collection exists, contains data, and that documents have an 'updatedAt' field (e.g., a Timestamp) for sorting.` 
+                  ? `No documents found in the "${documentBases.find(db => db.value === selectedCollection)?.label}" collection. Ensure this collection exists and contains data.` 
                   : 'No documents match your filter.'}
              </p>
           )}
@@ -201,4 +192,3 @@ export default function DocumentManagementPage() {
     </div>
   );
 }
-
