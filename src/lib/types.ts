@@ -1,4 +1,6 @@
-import { Timestamp } from "firebase/firestore";
+
+import type { Timestamp } from "firebase/firestore";
+import type { LucideIcon } from "lucide-react";
 
 export type NavItem = {
   title: string;
@@ -28,20 +30,25 @@ export type User = {
 export type SurveyResponse = {
   id: string;
   userId: string;
-  userName?: string; 
+  userName?: string;
   type: string;
   submissionDate: string;
   data: Record<string, any>;
 };
 
-export type UserDocument = {
+// Renamed from UserDocument and fields updated
+export type AppDocument = {
   id: string;
-  userId: string;
+  title: string;
+  url: string;
+  accessLevel: string;
+  status: string;
+  tags: string[]; // Assuming tags are an array of strings
+  updatedAt: string; // For sorting, from Firestore Timestamp
+  // Optional fields that might exist in some collections
+  userId?: string;
   userName?: string;
-  fileName: string;
-  fileType: 'PDF' | 'DOCX' | 'PNG' | 'JPG' | 'JPEG';
-  uploadDate: string;
-  url: string; // This would be a secure, temporary URL in a real app
+  fileType?: string; // Could be used for icons if available
 };
 
 // Represents a generic table column definition for the DataTable component
@@ -53,4 +60,3 @@ export interface DataTableColumn<TData> {
   enableHiding?: boolean;
   meta?: any; // Additional metadata for the column
 }
-
