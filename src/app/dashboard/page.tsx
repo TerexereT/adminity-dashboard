@@ -2,20 +2,32 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, ShieldAlert, BarChart3, FileText } from "lucide-react";
 import Link from "next/link";
+import { collection, getCountFromServer } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-// Note: Live counts from Firestore would require asynchronous fetching.
-// These are placeholders for now.
-const USERS_COUNT = 0; // Replace with dynamic fetching later
-const ADMINS_COUNT = 0; // Replace with dynamic fetching later
-const SURVEYS_COUNT = 0; // Replace with dynamic fetching later
-const DOCUMENTS_COUNT = 0; // Replace with dynamic fetching later
+async function getCollectionCount(collectionName: string): Promise<number | string> {
+  try {
+    const collRef = collection(db, collectionName);
+    const snapshot = await getCountFromServer(collRef);
+    return snapshot.data().count;
+  } catch (error) {
+    console.error(`Error fetching count for ${collectionName}:`, error);
+    return "N/A"; // Return "N/A" or 0 in case of an error
+  }
+}
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const usersCount = await getCollectionCount("Users");
+  const adminsCount = await getCollectionCount("Admins");
+  const surveysCount = await getCollectionCount("SurveyResponses");
+  // Assuming 'general_info' is the primary collection for documents count on dashboard
+  const documentsCount = await getCollectionCount("general_info"); 
+
   const stats = [
-    { title: "Total Users", value: USERS_COUNT, icon: Users, href: "/dashboard/users", description: "Manage all registered users." },
-    { title: "Admin Accounts", value: ADMINS_COUNT, icon: ShieldAlert, href: "/dashboard/admins", description: "Oversee admin personnel." },
-    { title: "Survey Responses", value: SURVEYS_COUNT, icon: BarChart3, href: "/dashboard/surveys", description: "View and analyze surveys." },
-    { title: "Uploaded Documents", value: DOCUMENTS_COUNT, icon: FileText, href: "/dashboard/documents", description: "Access user documents." },
+    { title: "Total Users", value: usersCount, icon: Users, href: "/dashboard/users", description: "Manage all registered users." },
+    { title: "Admin Accounts", value: adminsCount, icon: ShieldAlert, href: "/dashboard/admins", description: "Oversee admin personnel." },
+    { title: "Survey Responses", value: surveysCount, icon: BarChart3, href: "/dashboard/surveys", description: "View and analyze surveys." },
+    { title: "Knowledge Base Documents", value: documentsCount, icon: FileText, href: "/dashboard/documents", description: "Access general documents." },
   ];
 
   return (
@@ -73,3 +85,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
